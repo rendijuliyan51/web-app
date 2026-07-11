@@ -1,0 +1,23 @@
+{
+  "name": "cellyn-store",
+  "version": "1.0.0",
+  "description": "Cellyn Store - storefront toko digital dengan panel admin (Express + SQLite)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.0",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.33.5"
+  }
+}

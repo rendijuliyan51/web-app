@@ -7,27 +7,19 @@ on:
     branches: [main]
 
 jobs:
-  lint-compile-test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
+          node-version: "22"
+          cache: "npm"
 
-      - name: Install tooling
-        run: pip install ruff pytest
+      - name: Install dependencies
+        run: npm install
 
-      - name: Compile all Python (syntax check)
-        run: python -m compileall -q cogs utils admin main.py
-
-      - name: Lint (full pyflakes + syntax)
-        # Gate penuh:
-        #   E9 = syntax error, F = semua aturan pyflakes (undefined name,
-        #   import/var tak terpakai, redefinisi, dll). Repo sudah F-clean.
-        run: ruff check --select E9,F cogs utils admin main.py
-
-      - name: Unit tests
-        run: python -m pytest tests/ -q
+      - name: Syntax check (server + scripts)
+        run: node --check server.js

@@ -94,28 +94,7 @@ button{font-family:inherit;cursor:pointer}
 .section-title{font-size:17px;font-weight:800}
 .section-link{font-size:12px;color:var(--accent);font-weight:600}
 
-/* PRODUCT CARD H */
-.product-card-h{background:var(--card);border-radius:var(--radius);overflow:hidden;flex-shrink:0;width:140px;border:1px solid var(--border);transition:transform 0.15s;animation:card-in 0.35s ease both}
-.product-card-h:active{transform:scale(0.97)}
-.product-img-h{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--bg3)}
-.product-img-placeholder-h{width:100%;aspect-ratio:1/1;background:linear-gradient(135deg,var(--bg3),var(--bg2));display:flex;align-items:center;justify-content:center;font-size:32px}
-.product-body-h{padding:8px 10px 10px}
-.product-cat-h{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--accent);letter-spacing:0.05em;margin-bottom:2px}
-.product-name-h{font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--text)}
-.product-price-h{font-size:13px;font-weight:800;color:var(--accent)}
-.product-stock-ok{font-size:9px;color:#4ade80;font-weight:600;margin-top:2px}
-
-/* PRODUCT CARD V */
-.product-card-v{background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);display:flex;gap:12px;padding:10px;align-items:center;margin-bottom:8px;animation:card-in 0.35s ease both}
-.product-img-v{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--bg3);flex-shrink:0}
-.product-body-v{flex:1;min-width:0}
-.product-name-v{font-size:13px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.product-sub-v{font-size:11px;color:var(--muted);margin-bottom:4px}
-.product-price-v{font-size:12px;font-weight:800;color:var(--accent)}
-.product-action-v{flex-shrink:0}
-.btn-buy{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:99px;padding:8px 14px;font-size:11px;font-weight:700}
-.price-original{font-size:10px;color:var(--muted);text-decoration:line-through;margin-right:4px}
-.badge-promo{display:inline-block;background:rgba(192,132,252,0.15);color:var(--accent);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px}
+/* PRODUCT CARD (definisi lengkap ada di bagian CARD ANIMATIONS di bawah) */
 
 /* FOOTER */
 .site-footer{padding:24px 16px 12px;text-align:center;border-top:1px solid var(--border);margin-top:8px}
@@ -234,16 +213,6 @@ button{font-family:inherit;cursor:pointer}
 .ripple-wrap{position:relative;overflow:hidden}
 @keyframes ripple{0%{transform:scale(0);opacity:0.5}100%{transform:scale(4);opacity:0}}
 .ripple-el{position:absolute;border-radius:50%;background:rgba(192,132,252,0.35);pointer-events:none;animation:ripple 0.5s ease-out forwards;width:80px;height:80px;margin:-40px}
-
-/* SECTION */
-.section{padding:0 16px;margin-bottom:24px}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.section-title{font-size:17px;font-weight:800}
-.section-link{font-size:12px;color:var(--accent);font-weight:600}
-
-/* FOOTER */
-.site-footer{padding:24px 16px 12px;text-align:center;border-top:1px solid var(--border);margin-top:8px}
-.site-footer p{font-size:11px;color:var(--muted);line-height:1.6}
 
 /* SCROLL TOP */
 .scroll-top{position:fixed;bottom:90px;right:16px;width:40px;height:40px;background:var(--accent);color:#fff;border:none;border-radius:50%;font-size:18px;cursor:pointer;z-index:90;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(192,132,252,0.4);transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1)}
@@ -373,8 +342,6 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </div>
 
-<!-- CAT TABS (dirender oleh JS, sekali) -->
-<div class="cat-tabs" id="catTabs"></div>
 <div class="slider-wrap">
   <div class="slider" id="mainSlider">
     <div class="slider-track" id="sliderTrack">
@@ -496,6 +463,8 @@ button{font-family:inherit;cursor:pointer}
 <script>
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
+// Escape teks agar aman dimasukkan ke innerHTML (cegah XSS)
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function rupiah(n){return 'Rp'+new Intl.NumberFormat('id-ID').format(Number(n||0));}
 function flash(msg){const el=$('#flash');el.textContent=msg;el.classList.add('show');clearTimeout(window._ft);window._ft=setTimeout(()=>el.classList.remove('show'),2200);}
 async function api(url,opt={}){
@@ -512,16 +481,23 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 const state={products:[],categories:[],config:{},cart:[],currentPage:0,banners:[]};
 
 // ── CART ──
+// Kunci unik per baris keranjang: bedakan varian dari produk yang sama
+function cartKey(id,variantId){return variantId?(id+':'+variantId):('p'+id);}
 function saveCart(){try{localStorage.setItem('cellyn_cart',JSON.stringify(state.cart));}catch(e){}}
-function loadCart(){try{state.cart=JSON.parse(localStorage.getItem('cellyn_cart')||'[]');}catch(e){state.cart=[];}}
+function loadCart(){
+  try{state.cart=JSON.parse(localStorage.getItem('cellyn_cart')||'[]');}catch(e){state.cart=[];}
+  // Migrasi keranjang lama yang belum punya key
+  state.cart.forEach(it=>{if(!it.key)it.key=cartKey(it.id,it.variantId);});
+}
 function cartCount(){return state.cart.reduce((a,b)=>a+b.qty,0);}
 function cartTotal(){return state.cart.reduce((a,b)=>a+(b.price*b.qty),0);}
 
 function addToCart(p){
   if(Number(p.stock||0)<1)return flash('❌ Stok habis');
-  const found=state.cart.find(x=>x.id===p.id);
+  const key=cartKey(p.id,null);
+  const found=state.cart.find(x=>x.key===key);
   if(found){if(found.qty+1>Number(p.stock||0))return flash('❌ Melebihi stok');found.qty++;}
-  else state.cart.push({id:p.id,name:p.name,price:Number(p.price||0),qty:1,image:p.image,stock:Number(p.stock||0)});
+  else state.cart.push({key,id:p.id,name:p.name,price:Number(p.price||0),qty:1,image:p.image,stock:Number(p.stock||0)});
   saveCart();updateCartUI();
   flash('✅ '+p.name+' ditambahkan ke keranjang');
   // Animasi cart badge
@@ -533,10 +509,11 @@ function addToCart(p){
   });
 }
 
-function updateQty(id,delta){
-  const item=state.cart.find(x=>x.id===id);if(!item)return;
+function updateQty(key,delta){
+  const item=state.cart.find(x=>x.key===key);if(!item)return;
+  if(delta>0&&item.qty+1>Number(item.stock||0))return flash('❌ Melebihi stok');
   item.qty+=delta;
-  if(item.qty<=0)state.cart=state.cart.filter(x=>x.id!==id);
+  if(item.qty<=0)state.cart=state.cart.filter(x=>x.key!==key);
   saveCart();renderCartItems();
 }
 
@@ -557,15 +534,15 @@ function renderCartItems(){
   waBtn.disabled=false;waBtn.textContent='💬 Chat WhatsApp & Konfirmasi';
   el.innerHTML=state.cart.map(i=>`
     <div class="cart-item">
-      ${i.image?`<img class="cart-item-img" src="${i.image}" alt="${i.name}">`:`<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">🛍️</div>`}
+      ${i.image?`<img class="cart-item-img" src="${esc(i.image)}" alt="${esc(i.name)}">`:`<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">🛍️</div>`}
       <div class="cart-item-info">
-        <div class="cart-item-name">${i.name}</div>
+        <div class="cart-item-name">${esc(i.name)}</div>
         <div class="cart-item-price">${rupiah(i.price)}</div>
       </div>
       <div class="qty-ctrl">
-        <button class="qty-btn" onclick="updateQty(${i.id},-1)">−</button>
+        <button class="qty-btn" onclick="updateQty('${i.key}',-1)">−</button>
         <span class="qty-num">${i.qty}</span>
-        <button class="qty-btn" onclick="updateQty(${i.id},1)">+</button>
+        <button class="qty-btn" onclick="updateQty('${i.key}',1)">+</button>
       </div>
     </div>`).join('');
   summary.style.display='block';
@@ -583,7 +560,11 @@ function closeCart(){$('#cartOverlay').classList.remove('active');}
 $('#clearCartBtn').onclick=()=>{state.cart=[];saveCart();renderCartItems();updateCartUI();};
 $('#checkoutWaBtn').onclick=()=>{
   if(!state.cart.length)return flash('Keranjang kosong');
-  if(window._waLink){const w=window.open(window._waLink,'_blank','noopener');if(!w)flash('Izinkan popup di browser');}
+  if(window._waLink){
+    // Catat sebagai order (menambah jumlah terjual)
+    api('/api/track-order',{method:'POST',body:JSON.stringify({items:state.cart})}).catch(()=>{});
+    const w=window.open(window._waLink,'_blank','noopener');if(!w)flash('Izinkan popup di browser');
+  }
   else flash('Menyiapkan link WA...');
 };
 
@@ -600,7 +581,7 @@ function renderSearchHistory(){
   if(!searchHistory.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">Ketik nama produk...</div>';return;}
   el.innerHTML=`<div class="search-history">
     <div class="search-hist-title">Pencarian terakhir <span class="search-hist-clear" onclick="clearSearchHistory()">Hapus</span></div>
-    <div class="search-hist-tags">${searchHistory.map(h=>`<span class="hist-tag" onclick="doSearch('${h.replace(/'/g,"\\'")}')">🕐 ${h}</span>`).join('')}</div>
+    <div class="search-hist-tags">${searchHistory.map(h=>`<span class="hist-tag" onclick="doSearch('${esc(h).replace(/'/g,"\\'")}')">🕐 ${esc(h)}</span>`).join('')}</div>
   </div>`;
 }
 function clearSearchHistory(){searchHistory=[];try{localStorage.removeItem('cellyn_sh');}catch(e){}renderSearchHistory();}
@@ -619,10 +600,10 @@ function renderSearchResults(q){
   const results=state.products.filter(p=>[p.name,p.category_name,p.badge,p.summary].join(' ').toLowerCase().includes(q.toLowerCase()));
   if(!results.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">😕 Tidak ditemukan</div>';return;}
   el.innerHTML=results.map(p=>`
-    <div class="cart-item" onclick="closeSearch();saveSearchHistory('${q.replace(/'/g,"\\'")}');openDetail(${p.id})" style="cursor:pointer">
-      ${p.image?`<img class="cart-item-img" src="${p.image}" alt="${p.name}">`:`<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">🛍️</div>`}
+    <div class="cart-item" onclick="closeSearch();saveSearchHistory('${esc(q).replace(/'/g,"\\'")}');openDetail(${p.id})" style="cursor:pointer">
+      ${p.image?`<img class="cart-item-img" src="${esc(p.image)}" alt="${esc(p.name)}">`:`<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">🛍️</div>`}
       <div class="cart-item-info">
-        <div class="cart-item-name">${p.name}</div>
+        <div class="cart-item-name">${esc(p.name)}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
           ${Number(p.original_price||0)>Number(p.price)?`<span style="font-size:10px;color:var(--muted);text-decoration:line-through">${rupiah(p.original_price)}</span>`:''}
           <span style="color:var(--accent);font-weight:700;font-size:13px">${rupiah(p.price)}</span>
@@ -663,9 +644,9 @@ function openPromo(){
       const hasDisc=Number(p.original_price||0)>Number(p.price||0);
       const disc=hasDisc?Math.round((1-p.price/p.original_price)*100):0;
       return`<div class="cart-item" onclick="closePromo();openDetail(${p.id})" style="cursor:pointer">
-        ${p.image?`<img class="cart-item-img" src="${p.image}" alt="${p.name}">`:`<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">🛍️</div>`}
+        ${p.image?`<img class="cart-item-img" src="${esc(p.image)}" alt="${esc(p.name)}">`:`<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">🛍️</div>`}
         <div class="cart-item-info">
-          <div class="cart-item-name">${p.name}</div>
+          <div class="cart-item-name">${esc(p.name)}</div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
             ${hasDisc?`<span style="font-size:10px;color:var(--muted);text-decoration:line-through">${rupiah(p.original_price)}</span>`:''}
             <span style="color:var(--accent);font-weight:700;font-size:12px">${rupiah(p.price)}</span>
@@ -718,15 +699,15 @@ function initSlider(banners){
     const isVideo=b.image_path&&(b.image_path.endsWith('.mp4')||b.image_path.endsWith('.webm'));
     const media=b.image_path
       ?(isVideo
-        ?`<video src="${b.image_path}" autoplay loop muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>`
-        :`<img src="${b.image_path}" alt="${b.title||''}" loading="${i===0?'eager':'lazy'}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`)
+        ?`<video src="${esc(b.image_path)}" autoplay loop muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>`
+        :`<img src="${esc(b.image_path)}" alt="${esc(b.title||'')}" loading="${i===0?'eager':'lazy'}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`)
       :'';
     return`<div class="slide">
       ${media}
       <div class="slide-overlay"></div>
       <div class="slide-content">
-        <div class="slide-badge">${b.badge||cfg.heroPill||'APP PREMIUM'}</div>
-        <div class="slide-title">${b.title||cfg.heroSubtitle||'LIMITED-TIME DROPS AWAIT!'}</div>
+        <div class="slide-badge">${esc(b.badge||cfg.heroPill||'APP PREMIUM')}</div>
+        <div class="slide-title">${esc(b.title||cfg.heroSubtitle||'LIMITED-TIME DROPS AWAIT!')}</div>
       </div>
     </div>`;
   }).join('');
@@ -780,7 +761,7 @@ function getBadgeHtml(p){
   if(b.includes('hot')||b.includes('terlaris'))return`<span style="background:rgba(239,68,68,0.2);color:#f87171;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">🔥 Terlaris</span>`;
   if(b.includes('new')||b.includes('baru'))return`<span style="background:rgba(74,222,128,0.2);color:#4ade80;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">✨ Baru</span>`;
   if(b.includes('best'))return`<span style="background:rgba(251,191,36,0.2);color:#fbbf24;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">⭐ Best</span>`;
-  if(p.badge)return`<span style="background:var(--bg3);color:var(--muted);font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">${p.badge}</span>`;
+  if(p.badge)return`<span style="background:var(--bg3);color:var(--muted);font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">${esc(p.badge)}</span>`;
   return '';
 }
 
@@ -825,11 +806,11 @@ function renderPageContent(catId){
         const stok=disp.stock;
         const badge=getBadgeHtml(p);
         return`<div class="product-card-h" onclick="openDetail(${p.id})" style="position:relative">
-          ${(p.thumbnail||p.image)?`<img class="product-img-h" src="${p.thumbnail||p.image}" alt="${p.name}" loading="lazy">`:`<div class="product-img-placeholder-h">🛍️</div>`}
+          ${(p.thumbnail||p.image)?`<img class="product-img-h" src="${esc(p.thumbnail||p.image)}" alt="${esc(p.name)}" loading="lazy">`:`<div class="product-img-placeholder-h">🛍️</div>`}
           ${badge?`<div style="position:absolute;top:6px;left:6px;z-index:2">${badge}</div>`:''}
           <div class="product-body-h">
-            <div class="product-cat-h">${p.category_name||'Digital'}</div>
-            <div class="product-name-h">${p.name}</div>
+            <div class="product-cat-h">${esc(p.category_name||'Digital')}</div>
+            <div class="product-name-h">${esc(p.name)}</div>
             <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
               <span class="product-price-h">${disp.priceLabel}</span>
             </div>
@@ -848,10 +829,10 @@ function renderPageContent(catId){
       const stok=disp.stock;
       const badge=getBadgeHtml(p);
       return`<div class="product-card-v" onclick="openDetail(${p.id})">
-        ${(p.thumbnail||p.image)?`<img class="product-img-v" src="${p.thumbnail||p.image}" alt="${p.name}" loading="lazy">`:`<div class="product-img-v" style="display:flex;align-items:center;justify-content:center;font-size:24px">🛍️</div>`}
+        ${(p.thumbnail||p.image)?`<img class="product-img-v" src="${esc(p.thumbnail||p.image)}" alt="${esc(p.name)}" loading="lazy">`:`<div class="product-img-v" style="display:flex;align-items:center;justify-content:center;font-size:24px">🛍️</div>`}
         <div class="product-body-v">
           ${badge?`<div style="margin-bottom:4px">${badge}</div>`:''}
-          <div class="product-name-v">${p.name}</div>
+          <div class="product-name-v">${esc(p.name)}</div>
           <div class="product-sub-v">${stok<=0?'<span style="color:#f87171">Stok Habis</span>':stok<=3?`<span style="color:#fbbf24">Stok Tipis</span>`:'Ready stock'}${disp.hasVariants?` · <span style="color:var(--muted)">${disp.variantCount} varian</span>`:''}</div>
           <div style="display:flex;align-items:center;gap:6px">
             <span class="product-price-v">${disp.priceLabel}</span>
@@ -960,9 +941,9 @@ window.openDetail=id=>{
           const vo=Number(v.original_price||0);
           const vp=Number(v.price||0);
           const vDisc=vo>0&&vo>vp?Math.round((1-vp/vo)*100):0;
-          return`<div class="variant-option${i===0?' selected':''}" data-id="${v.id}" data-name="${v.name.replace(/"/g,'&quot;')}" data-price="${vp}" data-stock="${vs}" onclick="selectVariant(this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;border:1.5px solid ${i===0?'var(--accent)':'var(--border)'};background:${i===0?'rgba(192,132,252,0.08)':'var(--bg3)'};cursor:pointer;transition:all 0.15s">
+          return`<div class="variant-option${i===0?' selected':''}" data-id="${v.id}" data-name="${esc(v.name)}" data-price="${vp}" data-stock="${vs}" onclick="selectVariant(this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;border:1.5px solid ${i===0?'var(--accent)':'var(--border)'};background:${i===0?'rgba(192,132,252,0.08)':'var(--bg3)'};cursor:pointer;transition:all 0.15s">
             <div>
-              <div style="font-size:13px;font-weight:700;color:var(--text)">${v.name}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(v.name)}</div>
               <div style="font-size:11px;color:var(--muted);margin-top:2px">${vs<=0?'<span style="color:#f87171">Stok habis</span>':vs<=3?`<span style="color:#fbbf24">Stok tipis (${vs})</span>`:'Ready'}</div>
             </div>
             <div style="text-align:right">
@@ -991,17 +972,17 @@ window.openDetail=id=>{
 
   $('#detailContent').innerHTML=`
     <div class="sheet-top">
-      <span class="sheet-title" style="font-size:15px;max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>
+      <span class="sheet-title" style="font-size:15px;max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span>
       <button class="sheet-close" onclick="closeDetail()">✕</button>
     </div>
-    ${p.image?`<img class="detail-img" src="${p.image}" alt="${p.name}">`:''}
+    ${p.image?`<img class="detail-img" src="${esc(p.image)}" alt="${esc(p.name)}">`:''}
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-      <span class="detail-badge">${p.badge||p.category_name||'Digital'}</span>
+      <span class="detail-badge">${esc(p.badge||p.category_name||'Digital')}</span>
       ${isNew?'<span class="new-badge">✨ Baru</span>':''}
-      ${sold>0?`<span style="font-size:11px;color:var(--muted)">🔥 ${sold} terjual</span>`:''}
+      ${sold>0?`<span style="font-size:11px;color:var(--muted)">🔥 ${Number(sold)} terjual</span>`:''}
     </div>
-    <div class="detail-name">${p.name}</div>
-    ${p.description||p.summary?`<div class="detail-desc">${p.description||p.summary}</div>`:''}
+    <div class="detail-name">${esc(p.name)}</div>
+    ${p.description||p.summary?`<div class="detail-desc">${esc(p.description||p.summary)}</div>`:''}
     ${variantHtml}
     <div class="detail-meta">
       <div class="meta-item">
@@ -1010,7 +991,7 @@ window.openDetail=id=>{
         <div id="detailOrigPrice" style="font-size:10px;color:var(--muted);text-decoration:line-through;margin-top:2px;display:${displayDisc?'block':'none'}">${rupiah(displayOrig)}</div>
       </div>
       <div class="meta-item"><div class="meta-label">Stok</div><div class="meta-value" id="detailStok" style="color:${displayStok<=0?'#f87171':displayStok<=3?'#fbbf24':'#4ade80'}">${displayStok<=0?'Habis':displayStok<=3?`Tipis (${displayStok})`:'Ready'}</div></div>
-      ${p.category_name?`<div class="meta-item"><div class="meta-label">Kategori</div><div class="meta-value" style="font-size:12px">${p.category_name}</div></div>`:''}
+      ${p.category_name?`<div class="meta-item"><div class="meta-label">Kategori</div><div class="meta-value" style="font-size:12px">${esc(p.category_name)}</div></div>`:''}
     </div>
     <div class="detail-actions">
       <button class="btn-add-detail" id="detailAddBtn" onclick="addToCartFromDetail(${p.id})" ${displayStok<=0?'disabled':''}>🛒 Keranjang</button>
@@ -1023,9 +1004,9 @@ window.openDetail=id=>{
       <div class="related-grid">
         ${related.map(r=>`
           <div class="related-card" onclick="openDetail(${r.id})">
-            ${(r.thumbnail||r.image)?`<img class="related-img" src="${r.thumbnail||r.image}" alt="${r.name}" loading="lazy">`:`<div class="related-img" style="display:flex;align-items:center;justify-content:center;font-size:28px">🛍️</div>`}
+            ${(r.thumbnail||r.image)?`<img class="related-img" src="${esc(r.thumbnail||r.image)}" alt="${esc(r.name)}" loading="lazy">`:`<div class="related-img" style="display:flex;align-items:center;justify-content:center;font-size:28px">🛍️</div>`}
             <div class="related-body">
-              <div class="related-name">${r.name}</div>
+              <div class="related-name">${esc(r.name)}</div>
               <div class="related-price">${rupiah(r.price)}</div>
             </div>
           </div>`).join('')}
@@ -1086,13 +1067,15 @@ async function loadReviews(productId) {
       listEl.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Belum ada ulasan</div>';
       return;
     }
-    listEl.innerHTML = data.reviews.map(r=>`
+    listEl.innerHTML = data.reviews.map(r=>{
+      const rr=Math.max(0,Math.min(5,Number(r.rating)||0));
+      return `
       <div class="review-item">
-        <div class="review-name">${r.name}</div>
-        <div class="review-stars">${'⭐'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
-        ${r.comment?`<div class="review-comment">${r.comment}</div>`:''}
+        <div class="review-name">${esc(r.name)}</div>
+        <div class="review-stars">${'⭐'.repeat(rr)}${'☆'.repeat(5-rr)}</div>
+        ${r.comment?`<div class="review-comment">${esc(r.comment)}</div>`:''}
         <div class="review-date">${new Date(r.created_at).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
-      </div>`).join('');
+      </div>`;}).join('');
   } catch(e) {
     const listEl = $(`#reviewList-${productId}`);
     if(listEl) listEl.innerHTML='';
@@ -1149,6 +1132,7 @@ window.addToCartFromDetail = id => {
   const variants = p.variants||[];
   if(variants.length && selectedVariant) {
     const cartItem = {
+      key: cartKey(p.id, selectedVariant.id),
       id: p.id,
       variantId: selectedVariant.id,
       name: p.name + ' — ' + selectedVariant.name,
@@ -1158,7 +1142,7 @@ window.addToCartFromDetail = id => {
       stock: selectedVariant.stock
     };
     if(selectedVariant.stock<1) return flash('❌ Stok varian habis');
-    const found = state.cart.find(x=>x.id===p.id&&x.variantId===selectedVariant.id);
+    const found = state.cart.find(x=>x.key===cartItem.key);
     if(found){if(found.qty+1>selectedVariant.stock)return flash('❌ Melebihi stok');found.qty++;}
     else state.cart.push(cartItem);
     saveCart();updateCartUI();
@@ -1180,7 +1164,10 @@ window.buyNowFromDetail = id => {
     items = [{id:p.id,name:p.name,price:Number(p.price),qty:1}];
   }
   api('/api/build-whatsapp-link',{method:'POST',body:JSON.stringify({items})})
-    .then(r=>{ const w=window.open(r.waLink,'_blank','noopener'); if(!w)flash('Izinkan popup'); closeDetail(); })
+    .then(r=>{
+      api('/api/track-order',{method:'POST',body:JSON.stringify({items})}).catch(()=>{});
+      const w=window.open(r.waLink,'_blank','noopener'); if(!w)flash('Izinkan popup'); closeDetail();
+    })
     .catch(()=>flash('Gagal membuat link WA'));
 };
 
@@ -1210,7 +1197,7 @@ function applyBranding(cfg){
     $('#marqueeText2').textContent=txt;
     $('#marqueeWrap').classList.add('visible');
   }
-  if(cfg.logoPath)$('#headerLogo').innerHTML=`<img src="${cfg.logoPath}" alt="Logo">`;
+  if(cfg.logoPath)$('#headerLogo').innerHTML=`<img src="${esc(cfg.logoPath)}" alt="Logo">`;
   if(cfg.primaryColor){
     document.documentElement.style.setProperty('--accent',cfg.primaryColor);
     document.documentElement.style.setProperty('--accent2',cfg.primaryColor);
