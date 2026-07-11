@@ -24,6 +24,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 app.use('/api/', limiter);
 
+// Limiter ketat khusus login untuk cegah brute force
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.' }
+});
+
+// Proteksi CSRF untuk semua endpoint admin yang mengubah data (non-GET)
+app.use('/api/admin', csrfProtect);
+
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
@@ -126,11 +138,13 @@ db.exec(`
 
 try { db.exec(`ALTER TABLE products ADD COLUMN original_price INTEGER`); } catch (_) {}
 try { db.exec(`ALTER TABLE categories ADD COLUMN icon_url TEXT`); } catch (_) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN must_change_pw INTEGER DEFAULT 0`); } catch (_) {}
 
 const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
 if (!existingAdmin) {
   const hash = bcrypt.hashSync('cellyn123', 10);
-  db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('admin', hash, 'admin');
+  // Tandai wajib ganti password default setelah login pertama
+  db.prepare('INSERT INTO users (username, password, role, must_change_pw) VALUES (?, ?, ?, 1)').run('admin', hash, 'admin');
 }
 
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
@@ -185,6 +199,39 @@ async function applyWatermark(filePath) {
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// Escape untuk konteks HTML/atribut (cegah injeksi lewat data produk/toko)
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+// Token acak untuk CSRF / session
+function randomToken() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// Proteksi CSRF (double-submit cookie) untuk request yang mengubah data
+function csrfProtect(req, res, next) {
+  const method = req.method;
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return next();
+  const cookieToken = req.cookies && req.cookies.csrf_token;
+  const headerToken = req.get('X-CSRF-Token');
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    return res.status(403).json({ error: 'CSRF token tidak valid' });
+  }
+  next();
+}
+
+function issueCsrfCookie(req, res) {
+  let token = req.cookies && req.cookies.csrf_token;
+  if (!token) {
+    token = randomToken();
+    res.cookie('csrf_token', token, { httpOnly: false, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
+  }
+  return token;
 }
 
 function generateSessionId() {
@@ -253,7 +300,7 @@ function saveSetting(key, value) {
 }
 
 // AUTH
-app.post('/api/login', function(req, res) {
+app.post('/api/login', loginLimiter, function(req, res) {
   const username = req.body.username;
   const password = req.body.password;
   if (!username || !password) return res.status(400).json({ error: 'Username dan password wajib diisi' });
@@ -265,8 +312,9 @@ app.post('/api/login', function(req, res) {
   const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   db.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)').run(sid, user.id, expires);
   res.cookie('session_id', sid, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
+  issueCsrfCookie(req, res);
   audit(user, 'LOGIN', 'user', user.id, 'Login berhasil');
-  res.json({ success: true, user: { id: user.id, username: user.username, role: user.role } });
+  res.json({ success: true, user: { id: user.id, username: user.username, role: user.role }, mustChangePassword: !!user.must_change_pw });
 });
 
 app.post('/api/logout', function(req, res) {
@@ -279,7 +327,15 @@ app.post('/api/logout', function(req, res) {
 app.get('/api/me', function(req, res) {
   const user = getSession(req);
   if (!user) return res.json({ authenticated: false, user: null });
-  res.json({ authenticated: true, user: { id: user.id, username: user.username, role: user.role } });
+  // Pastikan cookie CSRF tersedia untuk sesi yang sudah login
+  const csrfToken = issueCsrfCookie(req, res);
+  const full = db.prepare('SELECT must_change_pw FROM users WHERE id = ?').get(user.id);
+  res.json({
+    authenticated: true,
+    user: { id: user.id, username: user.username, role: user.role },
+    mustChangePassword: !!(full && full.must_change_pw),
+    csrfToken
+  });
 });
 
 app.post('/api/admin/change-password', requireAuth, function(req, res) {
@@ -292,7 +348,7 @@ app.post('/api/admin/change-password', requireAuth, function(req, res) {
     return res.status(401).json({ error: 'Password saat ini salah' });
   }
   const hash = bcrypt.hashSync(newPassword, 10);
-  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, req.user.id);
+  db.prepare('UPDATE users SET password = ?, must_change_pw = 0 WHERE id = ?').run(hash, req.user.id);
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(req.user.id);
   res.clearCookie('session_id');
   audit(req.user, 'CHANGE_PASSWORD', 'user', req.user.id, 'Password diubah');
@@ -505,7 +561,6 @@ app.get('/api/products', function(req, res) {
 try { db.prepare('ALTER TABLE products ADD COLUMN sold_count INTEGER DEFAULT 0').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE products ADD COLUMN view_count INTEGER DEFAULT 0').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE products ADD COLUMN thumbnail TEXT').run(); } catch(e) {}
-try { db.prepare("ALTER TABLE store_settings ADD COLUMN wa_template TEXT DEFAULT ''").run(); } catch(e) {}
 
 // PRODUCT THUMBNAIL UPLOAD
 app.post('/api/admin/products/:id/thumb-upload', requireAuth, upload.single('file'), async function(req, res) {
@@ -581,6 +636,22 @@ app.delete('/api/admin/variants/:id', requireAuth, function(req, res) {
 // PRODUCT VIEW ENDPOINT
 app.post('/api/products/:id/view', function(req, res) {
   db.prepare('UPDATE products SET view_count = COALESCE(view_count,0)+1 WHERE id=?').run(req.params.id);
+  res.json({ success: true });
+});
+
+// TRACK ORDER — dipanggil saat customer benar-benar checkout (klik WhatsApp),
+// menambah sold_count per produk. Tidak dipanggil saat sekadar melihat keranjang.
+app.post('/api/track-order', function(req, res) {
+  const items = Array.isArray(req.body.items) ? req.body.items : [];
+  const stmt = db.prepare('UPDATE products SET sold_count = COALESCE(sold_count,0)+? WHERE id=?');
+  const tx = db.transaction(function(arr) {
+    arr.forEach(function(it) {
+      const id = it && it.id;
+      const qty = Math.max(1, Number(it && it.qty || 1));
+      if (id) stmt.run(qty, id);
+    });
+  });
+  try { tx(items); } catch (e) {}
   res.json({ success: true });
 });
 app.post('/api/build-whatsapp-link', function(req, res) {
@@ -707,30 +778,36 @@ app.get('/secretadmin', function(req, res) {
 const BOT_UA = /whatsapp|telegram|twitterbot|facebookexternalhit|linkedinbot|slackbot|discordbot|googlebot|bingbot|applebot|pinterest|vkshare|w3c_validator|curl|wget|python-requests|scrapy/i;
 
 function buildOGHtml(meta) {
+  const title = escHtml(meta.title);
+  const description = escHtml(meta.description);
+  const image = escHtml(meta.image);
+  const url = escHtml(meta.url);
+  const siteName = escHtml(meta.siteName);
+  const urlJson = JSON.stringify(String(meta.url || '')); // aman untuk konteks JS string
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${meta.title}</title>
-<meta name="description" content="${meta.description}">
+<title>${title}</title>
+<meta name="description" content="${description}">
 <meta property="og:type" content="website">
-<meta property="og:url" content="${meta.url}">
-<meta property="og:title" content="${meta.title}">
-<meta property="og:description" content="${meta.description}">
-<meta property="og:image" content="${meta.image}">
+<meta property="og:url" content="${url}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:image" content="${image}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:site_name" content="${meta.siteName}">
+<meta property="og:site_name" content="${siteName}">
 <meta property="og:locale" content="id_ID">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${meta.title}">
-<meta name="twitter:description" content="${meta.description}">
-<meta name="twitter:image" content="${meta.image}">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${description}">
+<meta name="twitter:image" content="${image}">
 </head>
 <body>
-<script>window.location.href="${meta.url}";</script>
-<p>Redirecting... <a href="${meta.url}">Klik di sini</a></p>
+<script>window.location.href=${urlJson};</script>
+<p>Redirecting... <a href="${url}">Klik di sini</a></p>
 </body>
 </html>`;
 }

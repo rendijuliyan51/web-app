@@ -1,10 +1,19 @@
-*.pyc
-__pycache__/
+# Dependencies
+node_modules/
+
+# Environment
 .env
-tickets.json
-venv/
-tickets.json
-midman.db
-.update_channel
-__pycache__/
-*.pyc
+
+# Runtime data (SQLite database + WAL files)
+data/
+
+# Uploaded media
+public/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS/editor
+.DS_Store
+.cache/
