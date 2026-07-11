@@ -35,6 +35,8 @@ echo ">> [3/7] Buat user aplikasi (${APP_USER})..."
 id -u "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin "$APP_USER"
 
 echo ">> [4/7] Clone / update repo di ${APP_DIR}..."
+# Cegah error "detected dubious ownership" karena folder dimiliki user aplikasi
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 if [ ! -d "$APP_DIR/.git" ]; then
   git clone "$REPO" "$APP_DIR"
 else
