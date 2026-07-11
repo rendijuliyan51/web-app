@@ -1,0 +1,10 @@
+*.pyc
+__pycache__/
+.env
+tickets.json
+venv/
+tickets.json
+midman.db
+.update_channel
+__pycache__/
+*.pyc

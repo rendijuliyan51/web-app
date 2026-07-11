@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-compile-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tooling
+        run: pip install ruff pytest
+
+      - name: Compile all Python (syntax check)
+        run: python -m compileall -q cogs utils admin main.py
+
+      - name: Lint (full pyflakes + syntax)
+        # Gate penuh:
+        #   E9 = syntax error, F = semua aturan pyflakes (undefined name,
+        #   import/var tak terpakai, redefinisi, dll). Repo sudah F-clean.
+        run: ruff check --select E9,F cogs utils admin main.py
+
+      - name: Unit tests
+        run: python -m pytest tests/ -q
