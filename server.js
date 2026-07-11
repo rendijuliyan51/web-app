@@ -270,8 +270,6 @@ const SETTINGS_MAP = {
   heroPill: 'hero_pill',
   heroTitle: 'hero_title',
   heroSubtitle: 'hero_subtitle',
-  heroBtnPrimary: 'hero_btn_primary',
-  heroBtnSecondary: 'hero_btn_secondary',
   primaryColor: 'primary_color',
   secondaryColor: 'secondary_color',
   bgColor: 'bg_color',
@@ -279,7 +277,8 @@ const SETTINGS_MAP = {
   footerText: 'footer_text',
   logoPath: 'logo_path',
   bannerPath: 'banner_path',
-  qrisImagePath: 'qris_image_path'
+  qrisImagePath: 'qris_image_path',
+  discordUrl: 'discord_url'
 };
 
 const SNAKE_TO_CAMEL = {};
@@ -516,16 +515,16 @@ app.get('/api/storefront', function(req, res) {
   const store = {
     name: settings.storeName || settings.store_name || 'Cellyn Store',
     tagline: settings.tagline || '',
+    description: settings.description || '',
     hero_pill: settings.heroPill || settings.hero_pill || '',
     hero_title: settings.heroTitle || settings.hero_title || '',
     hero_subtitle: settings.heroSubtitle || settings.hero_subtitle || '',
     hero_desc: settings.heroDesc || settings.hero_desc || settings.tagline || '',
-    hero_btn_primary: settings.heroBtnPrimary || '',
-    hero_btn_secondary: settings.heroBtnSecondary || '',
     footer_text: settings.footerText || '',
     logo_path: settings.logoPath || '',
     banner_path: settings.bannerPath || '',
     primary_color: settings.primaryColor || '',
+    secondary_color: settings.secondaryColor || '',
     bg_color: settings.bgColor || '',
     font_family: settings.fontFamily || '',
     qris_image_path: settings.qrisImagePath || '',

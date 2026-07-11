@@ -5,20 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cellyn Store</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --accent:#c084fc;
-  --accent2:#e879f9;
-  --bg:#0a0a0f;
-  --bg2:#12121a;
-  --bg3:#1a1a26;
-  --text:#ffffff;
-  --muted:#6b7280;
-  --border:#2a2a3a;
-  --card:#16161f;
-  --radius:16px;
+  --accent:#9a7413;   /* emas utama */
+  --accent2:#d3a428;  /* emas terang (highlight/gradient) */
+  --bg:#f4ecdd;       /* ivory hangat */
+  --bg2:#eee3cf;      /* section / chip */
+  --bg3:#e7dbc2;      /* field / skeleton */
+  --text:#241f16;     /* ink hangat */
+  --muted:#7b7059;    /* taupe */
+  --border:#dccfb2;   /* hairline */
+  --card:#fbf5e9;     /* kartu */
+  --radius:9px;
 }
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;padding-bottom:80px}
 img{max-width:100%;display:block}
@@ -42,7 +43,7 @@ button{font-family:inherit;cursor:pointer}
 .hero-sub{font-size:13px;color:var(--muted);line-height:1.5;margin-top:6px}
 
 /* MARQUEE */
-.marquee-wrap{overflow:hidden;background:linear-gradient(90deg,rgba(192,132,252,0.12),rgba(232,121,249,0.12));border-top:1px solid rgba(192,132,252,0.2);border-bottom:1px solid rgba(192,132,252,0.2);padding:7px 0;margin-bottom:0;display:none}
+.marquee-wrap{overflow:hidden;background:linear-gradient(90deg,rgba(154,116,19,0.12),rgba(211,164,40,0.12));border-top:1px solid rgba(154,116,19,0.2);border-bottom:1px solid rgba(154,116,19,0.2);padding:7px 0;margin-bottom:0;display:none}
 .marquee-wrap.visible{display:block}
 .marquee-track{display:flex;width:max-content;animation:marquee-scroll 22s linear infinite}
 .marquee-track:hover{animation-play-state:paused}
@@ -71,7 +72,7 @@ button{font-family:inherit;cursor:pointer}
 .slide img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
 .slide-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.85) 0%,transparent 60%)}
 .slide-content{position:absolute;bottom:0;left:0;right:0;padding:16px}
-.slide-badge{display:inline-block;background:rgba(192,132,252,0.2);border:1px solid rgba(192,132,252,0.4);color:var(--accent);font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px}
+.slide-badge{display:inline-block;background:rgba(154,116,19,0.2);border:1px solid rgba(154,116,19,0.4);color:var(--accent);font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px}
 .slide-title{font-size:20px;font-weight:800;color:#fff;line-height:1.2}
 .slider-dots{display:flex;gap:4px;margin-top:10px}
 .s-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);cursor:pointer;transition:all 0.2s}
@@ -198,7 +199,7 @@ button{font-family:inherit;cursor:pointer}
 .product-cat-h{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--accent);letter-spacing:0.05em;margin-bottom:2px}
 .product-name-h{font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--text)}
 .product-price-h{font-size:13px;font-weight:800;color:var(--accent)}
-.product-stock-ok{font-size:9px;color:#4ade80;font-weight:600;margin-top:2px}
+.product-stock-ok{font-size:9px;color:#2f8f43;font-weight:600;margin-top:2px}
 .product-img-v{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--bg3);flex-shrink:0}
 .product-body-v{flex:1;min-width:0}
 .product-name-v{font-size:13px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -207,15 +208,15 @@ button{font-family:inherit;cursor:pointer}
 .product-action-v{flex-shrink:0}
 .btn-buy{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:99px;padding:8px 14px;font-size:11px;font-weight:700;transition:transform 0.12s cubic-bezier(0.34,1.56,0.64,1)}
 .btn-buy:active{transform:scale(0.88)}
-.badge-promo{display:inline-block;background:rgba(192,132,252,0.15);color:var(--accent);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px}
+.badge-promo{display:inline-block;background:rgba(154,116,19,0.15);color:var(--accent);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px}
 
 /* RIPPLE */
 .ripple-wrap{position:relative;overflow:hidden}
 @keyframes ripple{0%{transform:scale(0);opacity:0.5}100%{transform:scale(4);opacity:0}}
-.ripple-el{position:absolute;border-radius:50%;background:rgba(192,132,252,0.35);pointer-events:none;animation:ripple 0.5s ease-out forwards;width:80px;height:80px;margin:-40px}
+.ripple-el{position:absolute;border-radius:50%;background:rgba(154,116,19,0.35);pointer-events:none;animation:ripple 0.5s ease-out forwards;width:80px;height:80px;margin:-40px}
 
 /* SCROLL TOP */
-.scroll-top{position:fixed;bottom:90px;right:16px;width:40px;height:40px;background:var(--accent);color:#fff;border:none;border-radius:50%;font-size:18px;cursor:pointer;z-index:90;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(192,132,252,0.4);transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1)}
+.scroll-top{position:fixed;bottom:90px;right:16px;width:40px;height:40px;background:var(--accent);color:#fff;border:none;border-radius:50%;font-size:18px;cursor:pointer;z-index:90;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(154,116,19,0.4);transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1)}
 .scroll-top.visible{display:flex}
 .scroll-top:active{transform:scale(0.88)}
 /* LOADING OVERLAY */
@@ -251,11 +252,11 @@ button{font-family:inherit;cursor:pointer}
 .star-btn.active{opacity:1}
 .star-btn:active{transform:scale(1.2)}
 .variant-option{transition:all 0.15s}
-.variant-option.selected{border-color:var(--accent)!important;background:rgba(192,132,252,0.08)!important}
+.variant-option.selected{border-color:var(--accent)!important;background:rgba(154,116,19,0.08)!important}
 .variant-option:active{transform:scale(0.98)}
 .sold-badge{font-size:10px;color:var(--muted);font-weight:600;margin-top:2px}
 .sold-badge span{color:#fbbf24}
-.new-badge{display:inline-block;background:rgba(74,222,128,0.15);color:#4ade80;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;margin-left:4px}
+.new-badge{display:inline-block;background:rgba(74,222,128,0.15);color:#2f8f43;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;margin-left:4px}
 
 /* CARD V improvements */
 .product-img-v{width:72px;height:72px;border-radius:12px;object-fit:cover;background:var(--bg3);flex-shrink:0}
@@ -286,6 +287,71 @@ button{font-family:inherit;cursor:pointer}
 /* ADD TO CART FEEDBACK */
 @keyframes cart-pop{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
 .cart-pop{animation:cart-pop 0.3s ease}
+
+/* ==================== EDITORIAL BOUTIQUE ==================== */
+/* Grain kertas halus di atas konten dasar */
+body::after{content:"";position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.05;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* Tipografi editorial: serif display + sans bersih */
+.hero-title,.section-title,.brand-name,.slide-title,.product-name-h,.product-name-v,
+.detail-name,.sheet-title,.related-name,.review-avg-score,.meta-value{
+  font-family:'Fraunces',Georgia,'Times New Roman',serif}
+.hero{padding-top:16px}
+.hero::before{content:"— Curated Digital Goods —";display:block;font-size:10px;letter-spacing:.28em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-weight:600}
+.hero-title{font-size:34px;font-weight:600;line-height:1.08;letter-spacing:-.015em}
+.hero-title span{background:none;-webkit-text-fill-color:var(--accent);color:var(--accent);font-style:italic;font-weight:500}
+.hero-sub{font-size:12.5px}
+.section-title{font-weight:600;letter-spacing:-.01em}
+.product-name-h,.product-name-v,.detail-name,.related-name{font-weight:600}
+.detail-name{letter-spacing:-.01em;font-size:22px}
+.sheet-title{font-size:18px;font-weight:600}
+
+/* Label kecil ala majalah */
+.product-cat-h,.review-title,.related-title,.search-hist-title,.meta-label{letter-spacing:.14em}
+
+/* Header / brand */
+.brand-pill{border-radius:8px}
+.brand-name{font-size:15px;font-weight:600}
+
+/* Gambar & kartu lebih crisp */
+.slider,.detail-img{border-radius:6px}
+.product-card-h:active{box-shadow:0 0 0 1px var(--accent);transform:scale(.97)!important}
+.product-card-v:active{box-shadow:0 0 0 1px var(--accent)}
+
+/* Badge outline elegan (bukan neon) */
+.slide-badge{background:transparent;border:1px solid rgba(255,255,255,.7);color:#fff;letter-spacing:.16em;border-radius:2px;font-weight:600;backdrop-filter:blur(2px)}
+.badge-promo{background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:2px;letter-spacing:.06em}
+
+/* Tombol: ink solid + CTA emas dengan teks ink */
+.btn{border-radius:9px;background:var(--text);color:var(--bg);font-weight:600;letter-spacing:.02em}
+.btn:hover{opacity:.92}
+.btn-buy{border-radius:8px;color:#2a2113}
+.btn-add-detail{color:#2a2113}
+.cat-tab.active{color:#2a2113}
+
+/* Search bar */
+.search-bar{border-radius:10px}
+
+/* Bottom nav terang + tanpa glow neon */
+.bottom-nav{background:rgba(244,236,221,.9);border-top:1px solid var(--border)}
+.nav-item.active .nav-icon svg{filter:none}
+
+/* Marquee emas */
+.marquee-wrap{background:linear-gradient(90deg,rgba(154,116,19,.10),rgba(211,164,40,.10));border-top-color:rgba(154,116,19,.22);border-bottom-color:rgba(154,116,19,.22)}
+
+/* Scroll top */
+.scroll-top{box-shadow:0 6px 18px rgba(154,116,19,.35);color:#fff}
+
+/* Ripple lembut */
+.ripple-el{background:rgba(154,116,19,.20)}
+
+/* Hairline di bawah judul section (kesan editorial) */
+.section-header{border-bottom:1px solid var(--border);padding-bottom:8px}
+
+/* Sheet */
+.sheet{border-radius:16px 16px 0 0}
 </style>
 </head>
 <body>
@@ -320,7 +386,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <!-- NOTIF POPUP -->
-<div id="notifPopup" style="display:none;margin:0 16px 10px;background:linear-gradient(135deg,rgba(192,132,252,0.15),rgba(232,121,249,0.1));border:1px solid rgba(192,132,252,0.3);border-radius:14px;padding:12px 14px;position:relative">
+<div id="notifPopup" style="display:none;margin:0 16px 10px;background:linear-gradient(135deg,rgba(154,116,19,0.15),rgba(211,164,40,0.1));border:1px solid rgba(154,116,19,0.3);border-radius:14px;padding:12px 14px;position:relative">
   <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px" id="notifTitle"></div>
   <div style="font-size:12px;color:var(--muted);line-height:1.5" id="notifMsg"></div>
   <button onclick="this.parentElement.style.display='none'" style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer">✕</button>
@@ -650,7 +716,7 @@ function openPromo(){
           <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
             ${hasDisc?`<span style="font-size:10px;color:var(--muted);text-decoration:line-through">${rupiah(p.original_price)}</span>`:''}
             <span style="color:var(--accent);font-weight:700;font-size:12px">${rupiah(p.price)}</span>
-            ${hasDisc?`<span style="background:rgba(192,132,252,0.15);color:var(--accent);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px">-${disc}%</span>`:''}
+            ${hasDisc?`<span style="background:rgba(154,116,19,0.15);color:var(--accent);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px">-${disc}%</span>`:''}
           </div>
         </div>
       </div>`;
@@ -757,9 +823,9 @@ function getBadgeHtml(p){
   const hasDisc=orig>0&&orig>price;
   const discPct=hasDisc?Math.round((1-price/orig)*100):0;
   const b=(p.badge||'').toLowerCase();
-  if(hasDisc||b.includes('promo'))return`<span style="background:rgba(192,132,252,0.2);color:var(--accent);font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">PROMO${discPct?` -${discPct}%`:''}</span>`;
+  if(hasDisc||b.includes('promo'))return`<span style="background:rgba(154,116,19,0.2);color:var(--accent);font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">PROMO${discPct?` -${discPct}%`:''}</span>`;
   if(b.includes('hot')||b.includes('terlaris'))return`<span style="background:rgba(239,68,68,0.2);color:#f87171;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">🔥 Terlaris</span>`;
-  if(b.includes('new')||b.includes('baru'))return`<span style="background:rgba(74,222,128,0.2);color:#4ade80;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">✨ Baru</span>`;
+  if(b.includes('new')||b.includes('baru'))return`<span style="background:rgba(74,222,128,0.2);color:#2f8f43;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">✨ Baru</span>`;
   if(b.includes('best'))return`<span style="background:rgba(251,191,36,0.2);color:#fbbf24;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">⭐ Best</span>`;
   if(p.badge)return`<span style="background:var(--bg3);color:var(--muted);font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px">${esc(p.badge)}</span>`;
   return '';
@@ -922,7 +988,7 @@ window.openDetail=id=>{
   const orig=Number(p.original_price||0),price=Number(p.price);
   const hasDisc=orig>0&&orig>price;
   const discPct=hasDisc?Math.round((1-price/orig)*100):0;
-  const stockColor=stok<=0?'#f87171':stok<=3?'#fbbf24':'#4ade80';
+  const stockColor=stok<=0?'#f87171':stok<=3?'#fbbf24':'#2f8f43';
   const stockText=stok<=0?'Habis':stok<=3?`Tipis (${stok})`:'Ready';
   const sold=p.sold_count||0;
   const isNew=p.id===Math.max(...state.products.map(x=>x.id));
@@ -941,7 +1007,7 @@ window.openDetail=id=>{
           const vo=Number(v.original_price||0);
           const vp=Number(v.price||0);
           const vDisc=vo>0&&vo>vp?Math.round((1-vp/vo)*100):0;
-          return`<div class="variant-option${i===0?' selected':''}" data-id="${v.id}" data-name="${esc(v.name)}" data-price="${vp}" data-stock="${vs}" onclick="selectVariant(this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;border:1.5px solid ${i===0?'var(--accent)':'var(--border)'};background:${i===0?'rgba(192,132,252,0.08)':'var(--bg3)'};cursor:pointer;transition:all 0.15s">
+          return`<div class="variant-option${i===0?' selected':''}" data-id="${v.id}" data-name="${esc(v.name)}" data-price="${vp}" data-stock="${vs}" onclick="selectVariant(this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;border:1.5px solid ${i===0?'var(--accent)':'var(--border)'};background:${i===0?'rgba(154,116,19,0.08)':'var(--bg3)'};cursor:pointer;transition:all 0.15s">
             <div>
               <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(v.name)}</div>
               <div style="font-size:11px;color:var(--muted);margin-top:2px">${vs<=0?'<span style="color:#f87171">Stok habis</span>':vs<=3?`<span style="color:#fbbf24">Stok tipis (${vs})</span>`:'Ready'}</div>
@@ -949,7 +1015,7 @@ window.openDetail=id=>{
             <div style="text-align:right">
               ${vo>0&&vo>vp?`<div style="font-size:10px;color:var(--muted);text-decoration:line-through">${rupiah(vo)}</div>`:''}
               <div style="font-size:14px;font-weight:800;color:var(--accent)">${rupiah(vp)}</div>
-              ${vDisc?`<div style="font-size:9px;color:#4ade80;font-weight:700">-${vDisc}%</div>`:''}
+              ${vDisc?`<div style="font-size:9px;color:#2f8f43;font-weight:700">-${vDisc}%</div>`:''}
             </div>
           </div>`;
         }).join('')}
@@ -990,7 +1056,7 @@ window.openDetail=id=>{
         <div class="meta-value" id="detailPrice" style="color:var(--accent)">${rupiah(displayPrice)}</div>
         <div id="detailOrigPrice" style="font-size:10px;color:var(--muted);text-decoration:line-through;margin-top:2px;display:${displayDisc?'block':'none'}">${rupiah(displayOrig)}</div>
       </div>
-      <div class="meta-item"><div class="meta-label">Stok</div><div class="meta-value" id="detailStok" style="color:${displayStok<=0?'#f87171':displayStok<=3?'#fbbf24':'#4ade80'}">${displayStok<=0?'Habis':displayStok<=3?`Tipis (${displayStok})`:'Ready'}</div></div>
+      <div class="meta-item"><div class="meta-label">Stok</div><div class="meta-value" id="detailStok" style="color:${displayStok<=0?'#f87171':displayStok<=3?'#fbbf24':'#2f8f43'}">${displayStok<=0?'Habis':displayStok<=3?`Tipis (${displayStok})`:'Ready'}</div></div>
       ${p.category_name?`<div class="meta-item"><div class="meta-label">Kategori</div><div class="meta-value" style="font-size:12px">${esc(p.category_name)}</div></div>`:''}
     </div>
     <div class="detail-actions">
@@ -1109,7 +1175,7 @@ window.selectVariant = el => {
   });
   el.classList.add('selected');
   el.style.borderColor = 'var(--accent)';
-  el.style.background = 'rgba(192,132,252,0.08)';
+  el.style.background = 'rgba(154,116,19,0.08)';
   const vPrice = Number(el.dataset.price);
   const vStock = Number(el.dataset.stock);
   selectedVariant = { id: Number(el.dataset.id), name: el.dataset.name, price: vPrice, stock: vStock };
@@ -1121,7 +1187,7 @@ window.selectVariant = el => {
   if(priceEl) priceEl.textContent = rupiah(vPrice);
   if(stokEl) {
     stokEl.textContent = vStock<=0?'Habis':vStock<=3?`Tipis (${vStock})`:'Ready';
-    stokEl.style.color = vStock<=0?'#f87171':vStock<=3?'#fbbf24':'#4ade80';
+    stokEl.style.color = vStock<=0?'#f87171':vStock<=3?'#fbbf24':'#2f8f43';
   }
   if(addBtn) addBtn.disabled = vStock<=0;
   if(buyBtn) { buyBtn.disabled = vStock<=0; buyBtn.style.opacity = vStock<=0?'0.4':'1'; }
@@ -1182,12 +1248,27 @@ window.addEventListener('scroll',()=>$('#scrollTop').classList.toggle('visible',
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCart();closeDetail();closeSearch();closePromo();}});
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
 
+function loadWebFont(fam){
+  if(!fam)return;
+  const id='dyn-font-'+fam.replace(/\W+/g,'');
+  if(document.getElementById(id))return;
+  const l=document.createElement('link');
+  l.id=id;l.rel='stylesheet';
+  l.href='https://fonts.googleapis.com/css2?family='+fam.trim().replace(/\s+/g,'+')+':wght@400;500;600;700&display=swap';
+  document.head.appendChild(l);
+}
 function applyBranding(cfg){
   if(!cfg)return;
   document.title=cfg.storeName||'Cellyn Store';
   if(cfg.storeName)$('#headerStoreName').textContent=cfg.storeName;
+  // Meta description untuk SEO / preview
+  if(cfg.description){
+    let m=document.querySelector('meta[name="description"]');
+    if(!m){m=document.createElement('meta');m.name='description';document.head.appendChild(m);}
+    m.content=cfg.description;
+  }
   if(cfg.heroTitle){
-    $('#heroTitle').innerHTML=cfg.heroTitle+'';
+    $('#heroTitle').innerHTML=esc(cfg.heroTitle);
   }
   // Marquee dari tagline (sekali saja)
   const mText=cfg.tagline||'';
@@ -1198,20 +1279,23 @@ function applyBranding(cfg){
     $('#marqueeWrap').classList.add('visible');
   }
   if(cfg.logoPath)$('#headerLogo').innerHTML=`<img src="${esc(cfg.logoPath)}" alt="Logo">`;
-  if(cfg.primaryColor){
-    document.documentElement.style.setProperty('--accent',cfg.primaryColor);
-    document.documentElement.style.setProperty('--accent2',cfg.primaryColor);
-  }
+  // Warna dapat dikustom dari admin
+  if(cfg.primaryColor)document.documentElement.style.setProperty('--accent',cfg.primaryColor);
+  if(cfg.secondaryColor)document.documentElement.style.setProperty('--accent2',cfg.secondaryColor);
+  if(cfg.bgColor)document.documentElement.style.setProperty('--bg',cfg.bgColor);
   if(cfg.heroSubtitle){
     const el=$('#heroSubText');
     if(el){el.textContent=cfg.heroSubtitle;el.style.display='block';}
   }
-  if(cfg.fontFamily)document.body.style.fontFamily=`'${cfg.fontFamily}',sans-serif`;
-  if(cfg.qrisImagePath){$('#qrisImg').src=cfg.qrisImagePath;$('#qrisWrap').style.display='block';}
-  if(cfg.footerText){
-    $('#footerText').textContent=cfg.footerText;
-    $('#siteFooter').style.display='block';
+  if(cfg.fontFamily){
+    loadWebFont(cfg.fontFamily);
+    document.body.style.fontFamily=`'${cfg.fontFamily}',Inter,sans-serif`;
   }
+  if(cfg.qrisImagePath){$('#qrisImg').src=cfg.qrisImagePath;$('#qrisWrap').style.display='block';}
+  // Footer selalu tampil (fallback bila kosong)
+  const foot=cfg.footerText||('© '+new Date().getFullYear()+' '+(cfg.storeName||'Cellyn Store'));
+  $('#footerText').textContent=foot;
+  $('#siteFooter').style.display='block';
 }
 
 async function init(){
@@ -1223,11 +1307,11 @@ async function init(){
     state.banners=data.banners||[];
     const s=data.store||{};
     state.config={
-      storeName:s.name,tagline:s.tagline,heroPill:s.hero_pill,
+      storeName:s.name,tagline:s.tagline,description:s.description,heroPill:s.hero_pill,
       heroTitle:s.hero_title,heroSubtitle:s.hero_subtitle,
       heroDesc:s.hero_desc||s.tagline,
       footerText:s.footer_text,logoPath:s.logo_path,bannerPath:s.banner_path,
-      primaryColor:s.primary_color,bgColor:s.bg_color,fontFamily:s.font_family,
+      primaryColor:s.primary_color,secondaryColor:s.secondary_color,bgColor:s.bg_color,fontFamily:s.font_family,
       qrisImagePath:s.qris_image_path,discordUrl:s.discord_url,
       whatsappNumber:s.whatsapp_number,waTemplate:s.wa_template
     };
