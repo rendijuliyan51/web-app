@@ -58,7 +58,10 @@ button{font-family:inherit;cursor:pointer}
 .profile-menu button:hover{background:var(--bg3)}
 
 /* ===== ANNOUNCEMENT ===== */
-.announce{position:fixed;top:0;left:0;right:0;z-index:499;background:var(--accent);color:#fff;text-align:center;font-size:13px;font-weight:600;padding:8px 40px;display:none;transform:translateY(-100%);transition:transform 0.4s ease}
+.announce{position:fixed;top:0;left:0;right:0;z-index:600;background:var(--accent);color:#fff;text-align:center;font-size:13px;font-weight:600;padding:9px 40px;display:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateY(-100%);transition:transform 0.4s ease}
+body.has-announce{padding-top:40px}
+body.has-announce .navbar{top:40px}
+body.has-announce .cat-bar{top:96px}
 .announce.show{display:block;transform:translateY(0)}
 .announce b{font-weight:800}
 .announce-close{position:absolute;top:50%;right:14px;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:16px;opacity:0.85}
@@ -103,7 +106,8 @@ button{font-family:inherit;cursor:pointer}
 .row-viewport:hover .row-arrow.show{display:flex}
 
 /* ===== CATEGORY BAR (chip, swipeable, sticky) ===== */
-.cat-bar{position:sticky;top:56px;z-index:100;background:var(--bg);border-bottom:1px solid rgba(255,255,255,0.06)}
+.cat-bar{position:fixed;top:56px;left:0;right:0;z-index:100;background:var(--bg);border-bottom:1px solid rgba(255,255,255,0.08);box-shadow:0 6px 18px rgba(0,0,0,0.45);transform:translateY(-135%);opacity:0;pointer-events:none;transition:transform 0.3s ease,opacity 0.3s ease}
+.cat-bar.show{transform:translateY(0);opacity:1;pointer-events:auto}
 .cat-chips{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding:12px 4vw}
 .cat-chips::-webkit-scrollbar{display:none}
 .chip-cat{display:flex;align-items:center;gap:7px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;color:#e5e5e5;border-radius:99px;padding:8px 16px;font-size:13px;font-weight:600;white-space:nowrap;transition:background 0.15s,color 0.15s,transform 0.1s}
@@ -313,6 +317,7 @@ textarea.input{resize:vertical;min-height:70px}
   .cat-chips{padding:10px 4vw}
   .chip-cat{padding:7px 13px;font-size:12px}
   .cat-bar{top:54px}
+  body.has-announce .cat-bar{top:94px}
   .bottom-nav{display:flex}
   body{padding-bottom:60px}
   .footer{padding-bottom:80px}
@@ -333,7 +338,7 @@ textarea.input{resize:vertical;min-height:70px}
 <!-- ANNOUNCEMENT -->
 <div class="announce" id="announce">
   <span id="announceText"></span>
-  <button class="announce-close" onclick="document.getElementById('announce').classList.remove('show')">✕</button>
+  <button class="announce-close" onclick="closeAnnounce()">✕</button>
 </div>
 
 <!-- NAVBAR -->
@@ -690,9 +695,10 @@ window.selectCategory=catId=>{
   state.currentCat=catId;
   $$('#catChips .chip-cat').forEach(b=>b.classList.toggle('active',String(b.dataset.cat)===String(catId)));
   renderView(catId);
+  updateCatBar();
   if(catId!=='all'){
-    const bar=$('#catBar');
-    if(bar){const y=bar.getBoundingClientRect().top+window.scrollY-58;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}
+    const rows=$('#rows');
+    if(rows){const y=rows.getBoundingClientRect().top+window.scrollY-110;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}
   }
 };
 function renderView(catId){
@@ -1054,9 +1060,16 @@ window.goHome=()=>{window.scrollTo({top:0,behavior:'smooth'});$('#profileMenu').
 window.toggleProfileMenu=e=>{e.stopPropagation();$('#profileMenu').classList.toggle('open');};
 document.addEventListener('click',()=>$('#profileMenu').classList.remove('open'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDetail();closeSearch();closePromo();closeCart();}});
+function updateCatBar(){
+  const cb=$('#catBar');if(!cb||cb.style.display==='none')return;
+  const show=state.currentCat!=='all'||window.scrollY>Math.max(300,window.innerHeight*0.5);
+  cb.classList.toggle('show',show);
+}
+window.closeAnnounce=()=>{$('#announce').classList.remove('show');document.body.classList.remove('has-announce');};
 window.addEventListener('scroll',()=>{
   $('#navbar').classList.toggle('scrolled',window.scrollY>40);
   $('#scrollTop').classList.toggle('show',window.scrollY>500);
+  updateCatBar();
 },{passive:true});
 
 /* ============ BRANDING (palet Netflix dikunci; hanya konten yang dari admin) ============ */
@@ -1080,25 +1093,13 @@ function applyBranding(cfg){
   const foot=cfg.footerText||('© '+new Date().getFullYear()+' '+(cfg.storeName||'Cellyn Store')+' — Semua hak dilindungi.');
   $('#footerText').textContent=foot;
   $('#siteFooter').style.display='block';
-  // Kontrol tema dari admin: aksen + font boleh diubah; LATAR tetap gelap (dikunci) demi konsistensi Netflix.
+  // Kontrol tema dari admin: HANYA aksen yang boleh diubah. Latar & font tetap dikunci (tema Netflix) demi konsistensi.
   if(cfg.primaryColor){
     document.documentElement.style.setProperty('--accent',cfg.primaryColor);
     document.documentElement.style.setProperty('--accent2',cfg.secondaryColor||cfg.primaryColor);
   }else if(cfg.secondaryColor){
     document.documentElement.style.setProperty('--accent2',cfg.secondaryColor);
   }
-  if(cfg.fontFamily){
-    loadWebFont(cfg.fontFamily);
-    document.body.style.fontFamily=`'${cfg.fontFamily}',Inter,Arial,sans-serif`;
-  }
-}
-function loadWebFont(fam){
-  if(!fam)return;
-  const id='dyn-font-'+String(fam).replace(/\W+/g,'');
-  if(document.getElementById(id))return;
-  const l=document.createElement('link');l.id=id;l.rel='stylesheet';
-  l.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(String(fam).trim()).replace(/%20/g,'+')+':wght@400;500;600;700;800;900&display=swap';
-  document.head.appendChild(l);
 }
 
 /* ============ INIT ============ */
@@ -1116,7 +1117,7 @@ async function init(){
       footerText:s.footer_text,logoPath:s.logo_path,bannerPath:s.banner_path,
       qrisImagePath:s.qris_image_path,discordUrl:s.discord_url,
       whatsappNumber:s.whatsapp_number,waTemplate:s.wa_template,
-      primaryColor:s.primary_color,secondaryColor:s.secondary_color,fontFamily:s.font_family
+      primaryColor:s.primary_color,secondaryColor:s.secondary_color
     };
     applyBranding(state.config);
 
@@ -1126,11 +1127,13 @@ async function init(){
       const n=unread[0];
       $('#announceText').innerHTML=`<b>${esc(n.title||'Info')}</b>${n.message?' — '+esc(n.message):''}`;
       $('#announce').classList.add('show');
+      document.body.classList.add('has-announce');
     }
 
     buildHero();
     buildChips();
     renderView(state.currentCat);
+    updateCatBar();
 
     // Deep-link ?produk=ID
     const pid=new URLSearchParams(window.location.search).get('produk');
