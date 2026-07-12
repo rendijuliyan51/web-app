@@ -8,6 +8,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import sharp from 'sharp';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +17,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
+
+// Security headers (tanpa dependency tambahan). CSP ketat sengaja dihindari
+// karena storefront/admin memakai banyak inline script/style & handler onclick.
+app.use(function(req, res, next) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=15552000');
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -31,6 +44,15 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.' }
+});
+
+// Limiter khusus kirim ulasan (anti-spam): maksimal 5 ulasan / jam / IP
+const reviewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Terlalu banyak ulasan dari perangkat ini. Coba lagi nanti.' }
 });
 
 // Proteksi CSRF untuk semua endpoint admin yang mengubah data (non-GET)
@@ -210,7 +232,7 @@ function escHtml(v) {
 
 // Token acak untuk CSRF / session
 function randomToken() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  return crypto.randomBytes(32).toString('hex');
 }
 
 // Proteksi CSRF (double-submit cookie) untuk request yang mengubah data
@@ -229,13 +251,13 @@ function issueCsrfCookie(req, res) {
   let token = req.cookies && req.cookies.csrf_token;
   if (!token) {
     token = randomToken();
-    res.cookie('csrf_token', token, { httpOnly: false, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.cookie('csrf_token', token, { httpOnly: false, secure: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
   }
   return token;
 }
 
 function generateSessionId() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  return crypto.randomBytes(32).toString('hex');
 }
 
 function getSession(req) {
@@ -310,7 +332,7 @@ app.post('/api/login', loginLimiter, function(req, res) {
   const sid = generateSessionId();
   const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   db.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)').run(sid, user.id, expires);
-  res.cookie('session_id', sid, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.cookie('session_id', sid, { httpOnly: true, secure: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
   issueCsrfCookie(req, res);
   audit(user, 'LOGIN', 'user', user.id, 'Login berhasil');
   res.json({ success: true, user: { id: user.id, username: user.username, role: user.role }, mustChangePassword: !!user.must_change_pw });
@@ -577,7 +599,7 @@ app.get('/api/products/:id/reviews', function(req, res) {
   res.json({ reviews, total: stats.total, avg: Math.round((stats.avg||0)*10)/10 });
 });
 
-app.post('/api/products/:id/reviews', function(req, res) {
+app.post('/api/products/:id/reviews', reviewLimiter, function(req, res) {
   const { name, rating, comment } = req.body;
   if(!name||!rating) return res.status(400).json({ error: 'Nama dan rating wajib' });
   if(rating<1||rating>5) return res.status(400).json({ error: 'Rating harus 1-5' });
@@ -863,5 +885,12 @@ app.get('*', function(req, res) {
   if (fs.existsSync(indexPath)) res.sendFile(indexPath);
   else res.status(404).send('Not found');
 });
+
+// Bersihkan sesi kedaluwarsa secara berkala (dan sekali saat start)
+function cleanupExpiredSessions() {
+  try { db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(new Date().toISOString()); } catch (_) {}
+}
+cleanupExpiredSessions();
+setInterval(cleanupExpiredSessions, 60 * 60 * 1000).unref();
 
 app.listen(PORT, function() { console.log('Cellyn Store running on port ' + PORT); });
