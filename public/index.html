@@ -339,6 +339,27 @@ textarea.input{resize:vertical;min-height:70px}
   <div class="loader-ring"></div>
 </div>
 
+<!-- FAILSAFE: overlay loading tidak boleh nyangkut selamanya (jaringan lambat / browser lama).
+     Blok skrip terpisah & sintaks ES5 agar tetap jalan walau skrip utama gagal di-parse. -->
+<script>
+(function(){
+  function reveal(){
+    var l=document.getElementById('pageLoading');
+    if(l){ l.style.transition='opacity .4s ease'; l.style.opacity='0';
+      setTimeout(function(){ if(l){ l.style.display='none'; } }, 450); }
+    var rows=document.getElementById('rows');
+    if(rows && rows.children.length===0){
+      rows.innerHTML='<div style="text-align:center;padding:80px 16px;color:#808080">'
+        +'<div style="font-size:17px;color:#fff;font-weight:700">Gagal memuat toko</div>'
+        +'<div style="font-size:13px;margin-top:8px">Periksa koneksi internet lalu coba lagi.</div>'
+        +'<button onclick="location.reload()" style="margin-top:18px;background:#E50914;color:#fff;border:none;border-radius:6px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer">Muat Ulang</button>'
+        +'</div>';
+    }
+  }
+  setTimeout(reveal, 15000);
+})();
+</script>
+
 <div class="flash" id="flash"></div>
 
 <!-- ANNOUNCEMENT -->
@@ -507,11 +528,19 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 async function api(url,opt={}){
   const options={credentials:'include',...opt};
   if(opt.body&&!(opt.body instanceof FormData))options.headers={...(opt.headers||{}),'Content-Type':'application/json'};
-  const res=await fetch(url,options);
-  const text=await res.text();
-  const data=text?JSON.parse(text):{};
-  if(!res.ok)throw new Error(data.error||'Request gagal');
-  return data;
+  let timer;
+  if(typeof AbortController!=='undefined'){
+    const ctrl=new AbortController();
+    options.signal=ctrl.signal;
+    timer=setTimeout(function(){try{ctrl.abort();}catch(e){}},12000);
+  }
+  try{
+    const res=await fetch(url,options);
+    const text=await res.text();
+    const data=text?JSON.parse(text):{};
+    if(!res.ok)throw new Error(data.error||'Request gagal');
+    return data;
+  }finally{ if(timer)clearTimeout(timer); }
 }
 
 const IC={
@@ -996,8 +1025,9 @@ async function loadReviews(pid){
   }catch(e){const el=$(`#reviewList-${pid}`);if(el)el.innerHTML='';}
 }
 window.submitReview=async pid=>{
-  const name=$(`#reviewName-${pid}`)?.value.trim();
-  const comment=$(`#reviewComment-${pid}`)?.value.trim();
+  const nameEl=$(`#reviewName-${pid}`),commentEl=$(`#reviewComment-${pid}`);
+  const name=nameEl?nameEl.value.trim():'';
+  const comment=commentEl?commentEl.value.trim():'';
   if(!name)return flash('Nama wajib diisi','err');
   if(!currentRating)return flash('Pilih bintang dulu','err');
   try{
