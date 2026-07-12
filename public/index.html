@@ -88,7 +88,7 @@ button{font-family:inherit;cursor:pointer}
 .hero-dot.active{background:var(--accent);width:22px;border-radius:99px}
 
 /* ===== ROWS ===== */
-.rows{position:relative;z-index:10;margin-top:-6vh;padding-bottom:40px}
+.rows{position:relative;z-index:10;margin-top:0;padding-bottom:40px}
 .row{margin:0 0 34px}
 .row-head{display:flex;align-items:center;justify-content:space-between;padding:0 4vw;margin-bottom:12px}
 .row-title{font-size:clamp(16px,2vw,22px);font-weight:800;color:#e5e5e5}
@@ -101,6 +101,26 @@ button{font-family:inherit;cursor:pointer}
 .row-arrow.left{left:0}
 .row-arrow.right{right:0}
 .row-viewport:hover .row-arrow.show{display:flex}
+
+/* ===== CATEGORY BAR (chip, swipeable, sticky) ===== */
+.cat-bar{position:sticky;top:56px;z-index:100;background:var(--bg);border-bottom:1px solid rgba(255,255,255,0.06)}
+.cat-chips{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding:12px 4vw}
+.cat-chips::-webkit-scrollbar{display:none}
+.chip-cat{display:flex;align-items:center;gap:7px;flex-shrink:0;background:rgba(255,255,255,0.08);border:none;color:#e5e5e5;border-radius:99px;padding:8px 16px;font-size:13px;font-weight:600;white-space:nowrap;transition:background 0.15s,color 0.15s,transform 0.1s}
+.chip-cat:hover{background:rgba(255,255,255,0.16)}
+.chip-cat:active{transform:scale(0.95)}
+.chip-cat.active{background:#fff;color:#141414}
+.chip-ic{width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;font-size:11px;overflow:hidden;flex-shrink:0}
+.chip-ic img{width:100%;height:100%;object-fit:cover}
+.chip-cat.active .chip-ic{background:rgba(0,0,0,0.1)}
+
+/* ===== GRID (tampilan saat kategori difilter) ===== */
+.grid-wrap{padding:24px 4vw 50px}
+.grid-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:16px}
+.grid-title{font-size:clamp(18px,2.4vw,26px);font-weight:800}
+.grid-count{font-size:12px;color:var(--muted);font-weight:600;flex-shrink:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
+.grid .card{width:auto}
 
 /* ===== CARD ===== */
 .card{position:relative;flex-shrink:0;width:250px;border-radius:var(--radius);overflow:hidden;background:var(--card);cursor:pointer;transition:transform 0.28s cubic-bezier(0.3,0,0.2,1),box-shadow 0.28s;will-change:transform;transform-origin:center center}
@@ -126,6 +146,7 @@ button{font-family:inherit;cursor:pointer}
   .card:hover{transform:scale(1.34);box-shadow:0 20px 50px rgba(0,0,0,0.85);z-index:20;border-radius:8px}
   .card:hover .card-media img{transform:scale(1.06)}
   .card:hover .card-info{transform:translateY(0);opacity:1}
+  .grid .card:hover{transform:scale(1.05)}
 }
 /* touch: show a compact info bar permanently */
 @media(hover:none){
@@ -288,6 +309,10 @@ textarea.input{resize:vertical;min-height:70px}
   .row-track{padding:16px 4vw}
   .row{margin-bottom:22px}
   .modal-btns{grid-template-columns:1fr}
+  .grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .cat-chips{padding:10px 4vw}
+  .chip-cat{padding:7px 13px;font-size:12px}
+  .cat-bar{top:54px}
   .bottom-nav{display:flex}
   body{padding-bottom:60px}
   .footer{padding-bottom:80px}
@@ -348,6 +373,11 @@ textarea.input{resize:vertical;min-height:70px}
   <div id="heroSlides"></div>
   <div class="hero-dots" id="heroDots"></div>
 </section>
+
+<!-- CATEGORY BAR (chip, bisa di-swipe, tap untuk filter) -->
+<div class="cat-bar" id="catBar" style="display:none">
+  <div class="cat-chips" id="catChips"></div>
+</div>
 
 <!-- ROWS -->
 <main class="rows" id="rows"></main>
@@ -466,7 +496,7 @@ async function api(url,opt={}){
   return data;
 }
 
-const state={products:[],categories:[],config:{},cart:[],banners:[],heroSlides:[],heroIdx:0,heroTimer:null};
+const state={products:[],categories:[],config:{},cart:[],banners:[],heroSlides:[],heroIdx:0,heroTimer:null,currentCat:'all'};
 
 /* ============ CART ============ */
 function cartKey(id,variantId){return variantId?(id+':'+variantId):('p'+id);}
@@ -643,6 +673,45 @@ window.scrollRow=(ri,dir)=>{
   const track=$('#rowTrack-'+ri);if(!track)return;
   track.scrollBy({left:dir*Math.max(track.clientWidth*0.8,300),behavior:'smooth'});
 };
+
+/* ============ CATEGORY CHIPS + FILTER ============ */
+function buildChips(){
+  const bar=$('#catBar'),el=$('#catChips');
+  if(!state.categories.length){bar.style.display='none';return;}
+  const cats=[{id:'all',name:'Semua',icon_url:''},...state.categories];
+  el.innerHTML=cats.map(c=>`
+    <button class="chip-cat${String(state.currentCat)===String(c.id)?' active':''}" data-cat="${esc(String(c.id))}" onclick="selectCategory('${esc(String(c.id)).replace(/'/g,"\\'")}')">
+      <span class="chip-ic">${c.icon_url?`<img src="${esc(c.icon_url)}" alt="">`:(c.id==='all'?'🏠':esc(String(c.name).charAt(0).toUpperCase()))}</span>
+      ${esc(c.name)}
+    </button>`).join('');
+  bar.style.display='block';
+}
+window.selectCategory=catId=>{
+  state.currentCat=catId;
+  $$('#catChips .chip-cat').forEach(b=>b.classList.toggle('active',String(b.dataset.cat)===String(catId)));
+  renderView(catId);
+  if(catId!=='all'){
+    const bar=$('#catBar');
+    if(bar){const y=bar.getBoundingClientRect().top+window.scrollY-58;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}
+  }
+};
+function renderView(catId){
+  if(catId==='all'){buildRows();return;}
+  renderGrid(catId);
+}
+function renderGrid(catId){
+  const cat=state.categories.find(c=>String(c.id)===String(catId));
+  const items=state.products.filter(p=>String(p.category_id)===String(catId));
+  const rowsEl=$('#rows');
+  if(!items.length){
+    rowsEl.innerHTML='<div class="empty-state"><div style="font-size:44px">📭</div><div style="margin-top:12px;color:#fff;font-weight:700">Belum ada produk di kategori ini</div><div style="font-size:13px;margin-top:6px">Pilih kategori lain atau lihat Semua.</div></div>';
+    return;
+  }
+  rowsEl.innerHTML=`<div class="grid-wrap">
+    <div class="grid-head"><span class="grid-title">${esc(cat?cat.name:'Produk')}</span><span class="grid-count">${items.length} produk</span></div>
+    <div class="grid">${items.map(cardHtml).join('')}</div>
+  </div>`;
+}
 
 /* ============ HERO ============ */
 function buildHero(){
@@ -1011,6 +1080,25 @@ function applyBranding(cfg){
   const foot=cfg.footerText||('© '+new Date().getFullYear()+' '+(cfg.storeName||'Cellyn Store')+' — Semua hak dilindungi.');
   $('#footerText').textContent=foot;
   $('#siteFooter').style.display='block';
+  // Kontrol tema dari admin: aksen + font boleh diubah; LATAR tetap gelap (dikunci) demi konsistensi Netflix.
+  if(cfg.primaryColor){
+    document.documentElement.style.setProperty('--accent',cfg.primaryColor);
+    document.documentElement.style.setProperty('--accent2',cfg.secondaryColor||cfg.primaryColor);
+  }else if(cfg.secondaryColor){
+    document.documentElement.style.setProperty('--accent2',cfg.secondaryColor);
+  }
+  if(cfg.fontFamily){
+    loadWebFont(cfg.fontFamily);
+    document.body.style.fontFamily=`'${cfg.fontFamily}',Inter,Arial,sans-serif`;
+  }
+}
+function loadWebFont(fam){
+  if(!fam)return;
+  const id='dyn-font-'+String(fam).replace(/\W+/g,'');
+  if(document.getElementById(id))return;
+  const l=document.createElement('link');l.id=id;l.rel='stylesheet';
+  l.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(String(fam).trim()).replace(/%20/g,'+')+':wght@400;500;600;700;800;900&display=swap';
+  document.head.appendChild(l);
 }
 
 /* ============ INIT ============ */
@@ -1027,7 +1115,8 @@ async function init(){
       heroTitle:s.hero_title,heroSubtitle:s.hero_subtitle,heroDesc:s.hero_desc||s.tagline,
       footerText:s.footer_text,logoPath:s.logo_path,bannerPath:s.banner_path,
       qrisImagePath:s.qris_image_path,discordUrl:s.discord_url,
-      whatsappNumber:s.whatsapp_number,waTemplate:s.wa_template
+      whatsappNumber:s.whatsapp_number,waTemplate:s.wa_template,
+      primaryColor:s.primary_color,secondaryColor:s.secondary_color,fontFamily:s.font_family
     };
     applyBranding(state.config);
 
@@ -1040,7 +1129,8 @@ async function init(){
     }
 
     buildHero();
-    buildRows();
+    buildChips();
+    renderView(state.currentCat);
 
     // Deep-link ?produk=ID
     const pid=new URLSearchParams(window.location.search).get('produk');
