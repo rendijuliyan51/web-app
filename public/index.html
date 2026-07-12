@@ -282,8 +282,13 @@ textarea.input{resize:vertical;min-height:70px}
 .hist-tag:hover{border-color:var(--accent)}
 
 /* ===== FLASH ===== */
-.flash{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:1200;padding:12px 22px;background:#fff;color:#141414;border-radius:6px;font-size:13px;font-weight:700;display:none;white-space:nowrap;max-width:90vw;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
-.flash.show{display:block;animation:flashIn 0.3s ease}
+.flash{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:1200;padding:12px 18px;background:#fff;color:#141414;border-radius:8px;font-size:13px;font-weight:700;display:none;align-items:center;gap:10px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+.flash.show{display:flex;animation:flashIn 0.3s ease}
+.flash-ic{display:flex;flex-shrink:0}
+.flash-ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.flash-ok .flash-ic{color:#1db954}
+.flash-err .flash-ic{color:var(--accent)}
+.flash-info .flash-ic{color:#666}
 @keyframes flashIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 
 /* ===== SCROLL TOP ===== */
@@ -490,7 +495,14 @@ const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function rupiah(n){return 'Rp'+new Intl.NumberFormat('id-ID').format(Number(n||0));}
-function flash(msg){const el=$('#flash');el.textContent=msg;el.classList.add('show');clearTimeout(window._ft);window._ft=setTimeout(()=>el.classList.remove('show'),2200);}
+function flash(msg,type){
+  const el=$('#flash');
+  const ic={ok:'<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',err:'<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'};
+  const t=ic[type]?type:'info';
+  el.className='flash flash-'+t;
+  el.innerHTML=`<span class="flash-ic">${ic[t]}</span><span>${esc(msg)}</span>`;
+  el.classList.add('show');clearTimeout(window._ft);window._ft=setTimeout(()=>el.classList.remove('show'),2400);
+}
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 async function api(url,opt={}){
   const options={credentials:'include',...opt};
@@ -527,18 +539,18 @@ function updateCartUI(){
   });
 }
 function addToCart(p){
-  if(Number(p.stock||0)<1)return flash('❌ Stok habis');
+  if(Number(p.stock||0)<1)return flash('Stok habis','err');
   const key=cartKey(p.id,null);
   const found=state.cart.find(x=>x.key===key);
-  if(found){if(found.qty+1>Number(p.stock||0))return flash('❌ Melebihi stok');found.qty++;}
+  if(found){if(found.qty+1>Number(p.stock||0))return flash('Melebihi stok','err');found.qty++;}
   else state.cart.push({key,id:p.id,name:p.name,price:Number(p.price||0),qty:1,image:p.thumbnail||p.image,stock:Number(p.stock||0)});
   saveCart();updateCartUI();
-  flash('✅ '+p.name+' ditambahkan');
+  flash(p.name+' ditambahkan','ok');
 }
 window.addCartById=id=>{const p=state.products.find(x=>x.id===id);if(p)addToCart(p);};
 window.updateQty=(key,delta)=>{
   const item=state.cart.find(x=>x.key===key);if(!item)return;
-  if(delta>0&&item.qty+1>Number(item.stock||0))return flash('❌ Melebihi stok');
+  if(delta>0&&item.qty+1>Number(item.stock||0))return flash('Melebihi stok','err');
   item.qty+=delta;
   if(item.qty<=0)state.cart=state.cart.filter(x=>x.key!==key);
   saveCart();renderCartItems();updateCartUI();
@@ -926,12 +938,12 @@ window.addToCartFromDetail=id=>{
   const variants=p.variants||[];
   if(variants.length){
     if(!selectedVariant)selectedVariant={id:Number(variants[0].id),name:variants[0].name,price:Number(variants[0].price),stock:Number(variants[0].stock||0)};
-    if(selectedVariant.stock<1)return flash('❌ Stok varian habis');
+    if(selectedVariant.stock<1)return flash('Stok varian habis','err');
     const key=cartKey(p.id,selectedVariant.id);
     const found=state.cart.find(x=>x.key===key);
-    if(found){if(found.qty+1>selectedVariant.stock)return flash('❌ Melebihi stok');found.qty++;}
+    if(found){if(found.qty+1>selectedVariant.stock)return flash('Melebihi stok','err');found.qty++;}
     else state.cart.push({key,id:p.id,variantId:selectedVariant.id,name:p.name+' — '+selectedVariant.name,price:selectedVariant.price,qty:1,image:p.thumbnail||p.image,stock:selectedVariant.stock});
-    saveCart();updateCartUI();flash('✅ '+p.name+' — '+selectedVariant.name+' ditambahkan');
+    saveCart();updateCartUI();flash(p.name+' — '+selectedVariant.name+' ditambahkan','ok');
   }else addToCart(p);
 };
 window.buyNowFromDetail=id=>{
@@ -939,22 +951,22 @@ window.buyNowFromDetail=id=>{
   const variants=p.variants||[];let items;
   if(variants.length){
     if(!selectedVariant)selectedVariant={id:Number(variants[0].id),name:variants[0].name,price:Number(variants[0].price),stock:Number(variants[0].stock||0)};
-    if(selectedVariant.stock<1)return flash('❌ Stok varian habis');
+    if(selectedVariant.stock<1)return flash('Stok varian habis','err');
     items=[{id:p.id,name:p.name+' — '+selectedVariant.name,price:selectedVariant.price,qty:1}];
   }else{
-    if(Number(p.stock||0)<1)return flash('❌ Stok habis');
+    if(Number(p.stock||0)<1)return flash('Stok habis','err');
     items=[{id:p.id,name:p.name,price:Number(p.price),qty:1}];
   }
   api('/api/build-whatsapp-link',{method:'POST',body:JSON.stringify({items})}).then(r=>{
     api('/api/track-order',{method:'POST',body:JSON.stringify({items})}).catch(()=>{});
     const w=window.open(r.waLink,'_blank','noopener');if(!w)flash('Izinkan popup');closeDetail();
-  }).catch(()=>flash('Gagal membuat link WA'));
+  }).catch(()=>flash('Gagal membuat link WA','err'));
 };
 window.shareProduct=id=>{
   const p=state.products.find(x=>x.id===id);if(!p)return;
   const shareUrl=window.location.origin+window.location.pathname+'?produk='+id;
   if(navigator.share)navigator.share({title:p.name,text:(p.summary||p.name)+' — '+rupiah(p.price),url:shareUrl});
-  else if(navigator.clipboard){navigator.clipboard.writeText(shareUrl);flash('🔗 Link disalin!');}
+  else if(navigator.clipboard){navigator.clipboard.writeText(shareUrl);flash('Link disalin!','ok');}
   else flash(shareUrl);
 };
 
@@ -986,15 +998,15 @@ async function loadReviews(pid){
 window.submitReview=async pid=>{
   const name=$(`#reviewName-${pid}`)?.value.trim();
   const comment=$(`#reviewComment-${pid}`)?.value.trim();
-  if(!name)return flash('❌ Nama wajib diisi');
-  if(!currentRating)return flash('❌ Pilih bintang dulu');
+  if(!name)return flash('Nama wajib diisi','err');
+  if(!currentRating)return flash('Pilih bintang dulu','err');
   try{
     await api('/api/products/'+pid+'/reviews',{method:'POST',body:JSON.stringify({name,rating:currentRating,comment})});
-    flash('✅ Ulasan terkirim, menunggu persetujuan admin');
+    flash('Ulasan terkirim, menunggu persetujuan admin','ok');
     if($(`#reviewName-${pid}`))$(`#reviewName-${pid}`).value='';
     if($(`#reviewComment-${pid}`))$(`#reviewComment-${pid}`).value='';
     currentRating=0;$$(`#starPicker-${pid} .star-btn`).forEach(b=>b.classList.remove('active'));
-  }catch(e){flash('❌ '+e.message);}
+  }catch(e){flash(e.message,'err');}
 };
 
 /* ============ SEARCH ============ */
