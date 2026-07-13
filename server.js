@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import sharp from 'sharp';
 import crypto from 'crypto';
+import { spawn } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -188,6 +189,11 @@ const upload = multer({
     else cb(new Error('Format tidak didukung. Gunakan JPG, PNG, GIF, WebP, MP4, atau WebM'));
   }
 });
+
+// Upload khusus file backup (.tar.gz) — tanpa filter gambar
+const restoreTmpDir = path.join(dataDir, 'restore-tmp');
+if (!fs.existsSync(restoreTmpDir)) fs.mkdirSync(restoreTmpDir, { recursive: true });
+const uploadBackup = multer({ dest: restoreTmpDir, limits: { fileSize: 1024 * 1024 * 1024 } });
 
 // WATERMARK
 async function applyWatermark(filePath) {
@@ -409,11 +415,22 @@ app.put('/api/admin/products/:id', requireAuth, function(req, res) {
   const id = req.params.id;
   const b = req.body;
   if (!b.name) return res.status(400).json({ error: 'Nama produk wajib' });
+  // Pertahankan status unggulan bila tidak dikirim (dikelola terpisah lewat toggle)
+  const cur = db.prepare('SELECT featured FROM products WHERE id = ?').get(id);
+  const featuredVal = (b.featured === undefined || b.featured === null) ? (cur ? cur.featured : 0) : (b.featured ? 1 : 0);
   db.prepare(
     'UPDATE products SET name=?, sku=?, category_id=?, price=?, original_price=?, stock=?, status=?, badge=?, summary=?, description=?, featured=?, sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
-  ).run(b.name, b.sku || null, b.category_id || null, b.price || 0, b.original_price || null, b.stock || 0, b.status || 'active', b.badge || null, b.summary || null, b.description || null, b.featured ? 1 : 0, b.sort_order || 99, id);
+  ).run(b.name, b.sku || null, b.category_id || null, b.price || 0, b.original_price || null, b.stock || 0, b.status || 'active', b.badge || null, b.summary || null, b.description || null, featuredVal, b.sort_order || 99, id);
   audit(req.user, 'UPDATE', 'product', id, 'Produk diperbarui');
   res.json({ id: Number(id), success: true });
+});
+
+// Toggle status unggulan (hero) tanpa mengubah field lain
+app.put('/api/admin/products/:id/featured', requireAuth, function(req, res) {
+  const val = req.body.featured ? 1 : 0;
+  db.prepare('UPDATE products SET featured = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(val, req.params.id);
+  audit(req.user, 'UPDATE', 'product', req.params.id, 'Set unggulan=' + val);
+  res.json({ success: true, featured: val });
 });
 
 app.delete('/api/admin/products/:id', requireAuth, function(req, res) {
@@ -789,6 +806,39 @@ app.get('/api/admin/export/audit.csv', requireAuth, function(req, res) {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="audit.csv"');
   res.send(csv);
+});
+
+// BACKUP: unduh 1 file berisi database + semua gambar upload
+app.get('/api/admin/backup', requireAuth, function(req, res) {
+  try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch (_) {}
+  const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+  res.setHeader('Content-Type', 'application/gzip');
+  res.setHeader('Content-Disposition', 'attachment; filename="cellyn-backup-' + ts + '.tar.gz"');
+  const tar = spawn('tar', ['-czf', '-', '-C', __dirname, 'data/store.db', 'public/uploads']);
+  tar.stdout.pipe(res);
+  tar.stderr.on('data', () => {});
+  tar.on('error', (e) => { if (!res.headersSent) res.status(500).json({ error: 'Backup gagal: ' + e.message }); });
+  audit(req.user, 'BACKUP', 'system', null, 'Unduh backup');
+});
+
+// RESTORE: upload file backup, timpa database + gambar, lalu restart
+app.post('/api/admin/restore', requireAuth, uploadBackup.single('file'), function(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'File backup tidak ditemukan' });
+  const tmp = req.file.path;
+  try { fs.copyFileSync(path.join(dataDir, 'store.db'), path.join(dataDir, 'store.db.prev')); } catch (_) {}
+  const tar = spawn('tar', ['-xzf', tmp, '-C', __dirname]);
+  tar.stderr.on('data', () => {});
+  tar.on('error', (e) => { try { fs.unlinkSync(tmp); } catch (_) {} if (!res.headersSent) res.status(500).json({ error: 'Restore gagal: ' + e.message }); });
+  tar.on('close', (code) => {
+    try { fs.unlinkSync(tmp); } catch (_) {}
+    if (code !== 0) { if (!res.headersSent) res.status(500).json({ error: 'Restore gagal (file backup tidak valid?)' }); return; }
+    // Buang WAL lama agar SQLite membaca store.db hasil restore saat restart
+    try { fs.unlinkSync(path.join(dataDir, 'store.db-wal')); } catch (_) {}
+    try { fs.unlinkSync(path.join(dataDir, 'store.db-shm')); } catch (_) {}
+    audit(req.user, 'RESTORE', 'system', null, 'Restore backup');
+    res.json({ success: true, message: 'Restore berhasil. Server akan restart, silakan muat ulang & login kembali.' });
+    setTimeout(() => process.exit(0), 800);
+  });
 });
 
 app.get('/secretadmin', function(req, res) {
