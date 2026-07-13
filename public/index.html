@@ -756,12 +756,11 @@ function buildChips(){
 window.selectCategory=catId=>{
   state.currentCat=catId;
   $$('#catChips .chip-cat').forEach(b=>b.classList.toggle('active',String(b.dataset.cat)===String(catId)));
+  buildHero(catId);
   renderView(catId);
   updateCatBar();
-  if(catId!=='all'){
-    const rows=$('#rows');
-    if(rows){const y=rows.getBoundingClientRect().top+window.scrollY-110;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}
-  }
+  // Naik ke atas supaya hero kategori yang baru langsung terlihat
+  window.scrollTo({top:0,behavior:'smooth'});
 };
 function renderView(catId){
   if(catId==='all'){buildRows();return;}
@@ -782,12 +781,25 @@ function renderGrid(catId){
 }
 
 /* ============ HERO ============ */
-function buildHero(){
+function buildHero(catId){
   const cfg=state.config;
-  const featured=state.products.filter(p=>Number(p.featured)===1);
-  // Hero = rotasi produk unggulan (semua yang di-"featured" ter-ekspos bergantian).
-  // Kalau belum ada yang di-featured, pakai produk terbaru supaya hero tetap berisi.
-  const heroProducts=featured.length?featured:[...state.products].sort((a,b)=>b.id-a.id).slice(0,6);
+  catId=catId||'all';
+  // Hero mengikuti kategori aktif: kategori tertentu -> produk unggulan kategori itu
+  // (fallback: produk kategori tsb); "Semua" -> produk unggulan global.
+  let heroProducts;
+  if(catId==='all'){
+    const featured=state.products.filter(p=>Number(p.featured)===1);
+    heroProducts=featured.length?featured:[...state.products].sort((a,b)=>b.id-a.id).slice(0,6);
+  }else{
+    const inCat=state.products.filter(p=>String(p.category_id)===String(catId));
+    const featCat=inCat.filter(p=>Number(p.featured)===1);
+    heroProducts=featCat.length?featCat:inCat.slice(0,6);
+    if(!heroProducts.length){
+      const gf=state.products.filter(p=>Number(p.featured)===1);
+      heroProducts=gf.length?gf:[...state.products].sort((a,b)=>b.id-a.id).slice(0,6);
+    }
+  }
+  state.heroIdx=0;
   const slides=heroProducts.map(p=>({
     media:p.image||p.thumbnail||'',
     badge:(p.badge||p.category_name||'PILIHAN'),
