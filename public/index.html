@@ -67,13 +67,15 @@ body.has-announce .cat-bar{top:96px}
 .announce-close{position:absolute;top:50%;right:14px;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:16px;opacity:0.85}
 
 /* ===== HERO ===== */
-.hero{position:relative;height:92vh;min-height:580px;max-height:960px;width:100%;overflow:hidden;background:#000}
-.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 0.9s ease;pointer-events:none}
+.hero{position:relative;height:88vh;min-height:560px;max-height:920px;width:100%;overflow:hidden;background:#000}
+.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 0.8s ease;pointer-events:none}
 .hero-slide.active{opacity:1;pointer-events:auto}
-.hero-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.hero-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,20,20,0.95) 0%,rgba(20,20,20,0.5) 35%,rgba(20,20,20,0.1) 60%,transparent 100%)}
-.hero-scrim2{position:absolute;inset:0;background:linear-gradient(0deg,var(--bg) 0%,rgba(20,20,20,0.4) 22%,transparent 55%)}
-.hero-content{position:absolute;left:4vw;bottom:16%;max-width:640px;z-index:3}
+.hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(30px) brightness(0.42);transform:scale(1.25)}
+.hero-fg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:7vh 4vw 20vh}
+.hero-fg img,.hero-fg video{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 24px 70px rgba(0,0,0,0.6)}
+.hero-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,20,20,0.9) 0%,rgba(20,20,20,0.35) 45%,transparent 78%)}
+.hero-scrim2{position:absolute;inset:0;background:linear-gradient(0deg,var(--bg) 3%,rgba(20,20,20,0.55) 20%,transparent 52%)}
+.hero-content{position:absolute;left:4vw;right:4vw;bottom:9%;max-width:640px;z-index:4}
 .hero-badge{display:inline-block;font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
 .hero-title{font-size:clamp(30px,5vw,60px);font-weight:900;line-height:1.05;letter-spacing:-0.02em;text-shadow:0 2px 12px rgba(0,0,0,0.7)}
 .hero-sub{font-size:clamp(13px,1.6vw,18px);color:#e5e5e5;line-height:1.5;margin-top:14px;max-width:520px;text-shadow:0 1px 8px rgba(0,0,0,0.8);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -228,14 +230,19 @@ body.has-announce .cat-bar{top:96px}
 .review-item{padding:12px 0;border-bottom:1px solid var(--border)}
 .review-item:last-child{border-bottom:none}
 .review-name{font-size:13px;font-weight:700}
-.review-stars{font-size:12px;color:#f6c453;margin:3px 0}
+.review-stars{display:inline-flex;gap:2px;margin:3px 0}
 .review-comment{font-size:13px;color:#c9c9c9;line-height:1.5}
 .review-date{font-size:11px;color:#5a5a5a;margin-top:4px}
 .review-form{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:14px}
-.star-picker{display:flex;gap:5px;margin-bottom:12px}
-.star-btn{font-size:26px;background:none;border:none;opacity:0.3;transition:opacity 0.1s,transform 0.1s;padding:0;filter:grayscale(1)}
-.star-btn.active{opacity:1;filter:none}
+.star-picker{display:flex;gap:6px;margin-bottom:12px}
+.star-btn{background:none;border:none;padding:0;cursor:pointer;color:#555;transition:color 0.12s,transform 0.1s}
+.star-btn.active{color:#f6c453}
+.star-btn svg{width:28px;height:28px;fill:currentColor;display:block}
 .star-btn:active{transform:scale(1.2)}
+.star{width:14px;height:14px;vertical-align:middle}
+.star-on{fill:#f6c453}
+.star-off{fill:none;stroke:#5a5a5a;stroke-width:1.6}
+.ic-x{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;display:inline-block;vertical-align:middle}
 .input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:14px;color:#fff;outline:none;font-family:inherit;margin-bottom:10px;transition:border-color 0.15s}
 .input:focus{border-color:var(--accent)}
 .input::placeholder{color:#6b6b6b}
@@ -310,7 +317,7 @@ textarea.input{resize:vertical;min-height:70px}
   .nav-link{font-size:13px}
   .hero{height:72vh;min-height:440px}
   .hero-content{bottom:12%;right:16px}
-  .card{width:160px}
+  .card{width:148px}
   .row-track{padding:16px 4vw}
   .row{margin-bottom:22px}
   .modal-btns{grid-template-columns:1fr}
@@ -360,7 +367,7 @@ textarea.input{resize:vertical;min-height:70px}
 <!-- ANNOUNCEMENT -->
 <div class="announce" id="announce">
   <span id="announceText"></span>
-  <button class="announce-close" onclick="closeAnnounce()">✕</button>
+  <button class="announce-close" onclick="closeAnnounce()"><svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
 </div>
 
 <!-- NAVBAR -->
@@ -464,7 +471,7 @@ textarea.input{resize:vertical;min-height:70px}
     <div class="modal-body">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <h2 style="font-size:22px;font-weight:900">Promo &amp; Diskon</h2>
-        <button class="modal-close" style="position:static" onclick="closePromo()">✕</button>
+        <button class="modal-close" style="position:static" onclick="closePromo()"><svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div id="promoList"></div>
     </div>
@@ -477,7 +484,7 @@ textarea.input{resize:vertical;min-height:70px}
     <div class="modal-body">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <h2 style="font-size:20px;font-weight:900">Cari Produk</h2>
-        <button class="modal-close" style="position:static" onclick="closeSearch()">✕</button>
+        <button class="modal-close" style="position:static" onclick="closeSearch()"><svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <input type="text" id="searchInput" class="input" placeholder="Ketik nama produk..." autocomplete="off">
       <div id="searchResults"></div>
@@ -490,7 +497,7 @@ textarea.input{resize:vertical;min-height:70px}
 <aside class="drawer" id="cartDrawer">
   <div class="drawer-head">
     <h3>Keranjang</h3>
-    <button class="modal-close" style="position:static" onclick="closeCart()">✕</button>
+    <button class="modal-close" style="position:static" onclick="closeCart()"><svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
   </div>
   <div class="drawer-body" id="cartItems"></div>
   <div class="drawer-foot" id="cartFoot" style="display:none">
@@ -544,6 +551,18 @@ const IC={
   bolt:'<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
   share:'<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>'
 };
+Object.assign(IC,{
+  box:'<svg viewBox="0 0 24 24" style="width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  cartLg:'<svg viewBox="0 0 24 24" style="width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+  storefront:'<svg viewBox="0 0 24 24" style="width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M3.5 9a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0"/></svg>',
+  inbox:'<svg viewBox="0 0 24 24" style="width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" style="width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" style="width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-0.15em;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
+  searchOff:'<svg viewBox="0 0 24 24" style="width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-0.15em;margin-right:6px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>',
+  home:'<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
+});
+const STAR='<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+function stars(n){n=Math.max(0,Math.min(5,Number(n)||0));var o='';for(var i=1;i<=5;i++){o+='<svg class="star '+(i<=n?'star-on':'star-off')+'" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';}return o;}
 const state={products:[],categories:[],config:{},cart:[],banners:[],heroSlides:[],heroIdx:0,heroTimer:null,currentCat:'all'};
 
 /* ============ CART ============ */
@@ -582,13 +601,13 @@ window.updateQty=(key,delta)=>{
 function renderCartItems(){
   const el=$('#cartItems'),foot=$('#cartFoot'),waEl=$('#waPreview'),waBtn=$('#checkoutWaBtn');
   if(!state.cart.length){
-    el.innerHTML='<div class="cart-empty"><div class="ic">🛒</div><div style="font-size:15px;font-weight:700;color:#fff">Keranjang kosong</div><div style="font-size:13px;margin-top:4px">Yuk pilih produk dulu</div></div>';
+    el.innerHTML='<div class="cart-empty"><div class="ic">${IC.cartLg}</div><div style="font-size:15px;font-weight:700;color:#fff">Keranjang kosong</div><div style="font-size:13px;margin-top:4px">Yuk pilih produk dulu</div></div>';
     foot.style.display='none';return;
   }
   foot.style.display='block';
   el.innerHTML=state.cart.map(i=>`
     <div class="cart-item">
-      ${i.image?`<img class="cart-item-img" src="${esc(i.image)}" alt="${esc(i.name)}">`:`<div class="cart-item-img">🛍️</div>`}
+      ${i.image?`<img class="cart-item-img" src="${esc(i.image)}" alt="${esc(i.name)}">`:`<div class="cart-item-img">${IC.box}</div>`}
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(i.name)}</div>
         <div class="cart-item-price">${rupiah(i.price)}</div>
@@ -654,7 +673,7 @@ function cardHtml(p){
   const hasDisc=disp.orig>0&&disp.orig>disp.price;
   return`<div class="card" onclick="openDetail(${p.id})">
     <div class="card-media">
-      ${img?`<img src="${esc(img)}" alt="${esc(p.name)}" loading="lazy">`:`<div class="ph">🛍️</div>`}
+      ${img?`<img src="${esc(img)}" alt="${esc(p.name)}" loading="lazy">`:`<div class="ph">${IC.box}</div>`}
       ${bg?`<span class="card-tag ${bg.cls}">${esc(bg.txt)}</span>`:''}
     </div>
     <div class="card-info">
@@ -703,7 +722,7 @@ function buildRows(){
   }
 
   if(!state.products.length){
-    rowsEl.innerHTML='<div class="empty-state"><div style="font-size:48px;margin-bottom:14px">🎬</div><div style="font-size:16px;font-weight:700;color:#fff">Belum ada produk</div><div style="font-size:13px;margin-top:6px">Tambahkan produk lewat panel admin</div></div>';
+    rowsEl.innerHTML='<div class="empty-state"><div style="font-size:48px;margin-bottom:14px">${IC.storefront}</div><div style="font-size:16px;font-weight:700;color:#fff">Belum ada produk</div><div style="font-size:13px;margin-top:6px">Tambahkan produk lewat panel admin</div></div>';
     return;
   }
 
@@ -729,7 +748,7 @@ function buildChips(){
   const cats=[{id:'all',name:'Semua',icon_url:''},...state.categories];
   el.innerHTML=cats.map(c=>`
     <button class="chip-cat${String(state.currentCat)===String(c.id)?' active':''}" data-cat="${esc(String(c.id))}" onclick="selectCategory('${esc(String(c.id)).replace(/'/g,"\\'")}')">
-      <span class="chip-ic">${c.icon_url?`<img src="${esc(c.icon_url)}" alt="">`:(c.id==='all'?'🏠':esc(String(c.name).charAt(0).toUpperCase()))}</span>
+      <span class="chip-ic">${c.icon_url?`<img src="${esc(c.icon_url)}" alt="">`:(c.id==='all'?IC.home:esc(String(c.name).charAt(0).toUpperCase()))}</span>
       ${esc(c.name)}
     </button>`).join('');
   bar.style.display='block';
@@ -753,7 +772,7 @@ function renderGrid(catId){
   const items=state.products.filter(p=>String(p.category_id)===String(catId));
   const rowsEl=$('#rows');
   if(!items.length){
-    rowsEl.innerHTML='<div class="empty-state"><div style="font-size:44px">📭</div><div style="margin-top:12px;color:#fff;font-weight:700">Belum ada produk di kategori ini</div><div style="font-size:13px;margin-top:6px">Pilih kategori lain atau lihat Semua.</div></div>';
+    rowsEl.innerHTML='<div class="empty-state"><div style="font-size:44px">${IC.inbox}</div><div style="margin-top:12px;color:#fff;font-weight:700">Belum ada produk di kategori ini</div><div style="font-size:13px;margin-top:6px">Pilih kategori lain atau lihat Semua.</div></div>';
     return;
   }
   rowsEl.innerHTML=`<div class="grid-wrap">
@@ -766,32 +785,17 @@ function renderGrid(catId){
 function buildHero(){
   const cfg=state.config;
   const featured=state.products.filter(p=>Number(p.featured)===1);
-  const heroProducts=featured.length?featured:state.products.slice(0,5);
-  const slides=[];
-
-  // Prioritas: banner aktif dari admin
-  if(state.banners&&state.banners.length){
-    state.banners.forEach((b,i)=>{
-      const prod=heroProducts[i%Math.max(heroProducts.length,1)]||heroProducts[0]||null;
-      slides.push({
-        media:b.image_path||cfg.bannerPath||'',
-        badge:b.badge||cfg.heroPill||'APP PREMIUM',
-        title:b.title||cfg.heroTitle||cfg.storeName||'Cellyn Store',
-        sub:cfg.heroSubtitle||cfg.heroDesc||cfg.tagline||'',
-        product:prod
-      });
-    });
-  }else if(heroProducts.length){
-    heroProducts.forEach(p=>{
-      slides.push({
-        media:p.image||cfg.bannerPath||'',
-        badge:(p.badge||p.category_name||'PILIHAN'),
-        title:p.name,
-        sub:p.summary||p.description||cfg.heroSubtitle||'',
-        product:p
-      });
-    });
-  }else{
+  // Hero = rotasi produk unggulan (semua yang di-"featured" ter-ekspos bergantian).
+  // Kalau belum ada yang di-featured, pakai produk terbaru supaya hero tetap berisi.
+  const heroProducts=featured.length?featured:[...state.products].sort((a,b)=>b.id-a.id).slice(0,6);
+  const slides=heroProducts.map(p=>({
+    media:p.image||p.thumbnail||'',
+    badge:(p.badge||p.category_name||'PILIHAN'),
+    title:p.name,
+    sub:p.summary||p.description||cfg.heroSubtitle||cfg.tagline||'',
+    product:p
+  }));
+  if(!slides.length){
     slides.push({media:cfg.bannerPath||'',badge:cfg.heroPill||'PREMIUM',title:cfg.heroTitle||cfg.storeName||'Cellyn Store',sub:cfg.heroSubtitle||cfg.tagline||'',product:null});
   }
 
@@ -799,11 +803,14 @@ function buildHero(){
   const wrap=$('#heroSlides');
   wrap.innerHTML=slides.map((s,i)=>{
     const isVideo=s.media&&(s.media.endsWith('.mp4')||s.media.endsWith('.webm'));
-    const media=s.media
-      ?(isVideo
-        ?`<video class="hero-media" src="${esc(s.media)}" autoplay loop muted playsinline></video>`
-        :`<img class="hero-media" src="${esc(s.media)}" alt="${esc(s.title)}" ${i===0?'':'loading="lazy"'}>`)
-      :`<div class="hero-media" style="background:linear-gradient(135deg,#3a0a0d,#141414)"></div>`;
+    let media;
+    if(!s.media){
+      media=`<div class="hero-bg" style="background:linear-gradient(135deg,#3a0a0d,#141414)"></div>`;
+    }else if(isVideo){
+      media=`<div class="hero-bg" style="background:#0a0a0a"></div><div class="hero-fg"><video src="${esc(s.media)}" autoplay loop muted playsinline></video></div>`;
+    }else{
+      media=`<div class="hero-bg" style="background-image:url('${esc(s.media)}')"></div><div class="hero-fg"><img src="${esc(s.media)}" alt="${esc(s.title)}" ${i===0?'':'loading="lazy"'}></div>`;
+    }
     const p=s.product;
     const disp=p?getProductDisplay(p):null;
     const hasDisc=disp&&disp.orig>0&&disp.orig>disp.price;
@@ -869,7 +876,7 @@ window.openDetail=id=>{
   const isVideo=p.image&&(p.image.endsWith('.mp4')||p.image.endsWith('.webm'));
   const heroMedia=p.image
     ?(isVideo?`<video src="${esc(p.image)}" autoplay loop muted playsinline></video>`:`<img src="${esc(p.image)}" alt="${esc(p.name)}">`)
-    :`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:64px;background:linear-gradient(135deg,#232323,#141414)">🛍️</div>`;
+    :`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:64px;background:linear-gradient(135deg,#232323,#141414)">${IC.box}</div>`;
 
   const variantHtml=variants.length?`
     <div class="section-label">Pilih Varian</div>
@@ -890,7 +897,7 @@ window.openDetail=id=>{
     <div class="modal-hero">
       ${heroMedia}
       <div class="modal-hero-scrim"></div>
-      <button class="modal-close" onclick="closeDetail()">✕</button>
+      <button class="modal-close" onclick="closeDetail()"><svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       <div class="modal-title-abs"><h2>${esc(p.name)}</h2></div>
     </div>
     <div class="modal-body">
@@ -914,7 +921,7 @@ window.openDetail=id=>{
         ${related.map(r=>{
           const ri=r.thumbnail||r.image;
           return`<div class="related-card" onclick="openDetail(${r.id})">
-            ${ri?`<img src="${esc(ri)}" alt="${esc(r.name)}" loading="lazy">`:`<div style="width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--bg3)">🛍️</div>`}
+            ${ri?`<img src="${esc(ri)}" alt="${esc(r.name)}" loading="lazy">`:`<div style="width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--bg3)">${IC.box}</div>`}
             <div class="rb"><div class="rn">${esc(r.name)}</div><div class="rp">${rupiah(r.price)}</div></div>
           </div>`;
         }).join('')}
@@ -923,9 +930,9 @@ window.openDetail=id=>{
       <div class="review-avg" id="reviewAvg-${p.id}"></div>
       <div id="reviewList-${p.id}" style="margin-top:8px"><div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">Memuat ulasan...</div></div>
       <div class="review-form">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">✍️ Tulis Ulasan</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Tulis Ulasan</div>
         <div class="star-picker" id="starPicker-${p.id}">
-          ${[1,2,3,4,5].map(n=>`<button class="star-btn" data-val="${n}" onclick="setRating(${p.id},${n})">⭐</button>`).join('')}
+          ${[1,2,3,4,5].map(n=>`<button class="star-btn" data-val="${n}" onclick="setRating(${p.id},${n})">${STAR}</button>`).join('')}
         </div>
         <input type="text" id="reviewName-${p.id}" class="input" placeholder="Nama kamu">
         <textarea id="reviewComment-${p.id}" class="input" placeholder="Ceritakan pengalamanmu..."></textarea>
@@ -1005,14 +1012,14 @@ async function loadReviews(pid){
     const listEl=$(`#reviewList-${pid}`),avgEl=$(`#reviewAvg-${pid}`);
     if(!listEl)return;
     if(data.avg&&data.total){
-      avgEl.innerHTML=`<span class="score">${data.avg}</span><span style="color:#f6c453;font-size:15px">${'⭐'.repeat(Math.round(data.avg))}</span><span style="font-size:12px;color:var(--muted)">(${data.total} ulasan)</span>`;
+      avgEl.innerHTML=`<span class="score">${data.avg}</span><span class="review-stars">${stars(Math.round(data.avg))}</span><span style="font-size:12px;color:var(--muted)">(${data.total} ulasan)</span>`;
     }
     if(!data.reviews.length){listEl.innerHTML='<div style="padding:12px 0;color:var(--muted);font-size:13px">Belum ada ulasan. Jadilah yang pertama!</div>';return;}
     listEl.innerHTML=data.reviews.map(r=>{
       const rr=Math.max(0,Math.min(5,Number(r.rating)||0));
       return`<div class="review-item">
         <div class="review-name">${esc(r.name)}</div>
-        <div class="review-stars">${'⭐'.repeat(rr)}${'<span style="color:#444">☆</span>'.repeat(5-rr)}</div>
+        <div class="review-stars">${stars(rr)}</div>
         ${r.comment?`<div class="review-comment">${esc(r.comment)}</div>`:''}
         <div class="review-date">${new Date(r.created_at).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
       </div>`;
@@ -1044,17 +1051,17 @@ function renderSearchHistory(){
   const el=$('#searchResults');
   if(!searchHistory.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">Ketik nama produk untuk mencari…</div>';return;}
   el.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin:14px 0 10px;display:flex;justify-content:space-between">Pencarian terakhir <span style="color:var(--accent);cursor:pointer" onclick="clearSearchHistory()">Hapus</span></div>
-    <div class="hist-tags">${searchHistory.map(h=>`<span class="hist-tag" onclick="doSearch('${esc(h).replace(/'/g,"\\'")}')">🕐 ${esc(h)}</span>`).join('')}</div>`;
+    <div class="hist-tags">${searchHistory.map(h=>`<span class="hist-tag" onclick="doSearch('${esc(h).replace(/'/g,"\\'")}')">${IC.clock}${esc(h)}</span>`).join('')}</div>`;
 }
 function renderSearchResults(q){
   const el=$('#searchResults');
   if(!q){renderSearchHistory();return;}
   const results=state.products.filter(p=>[p.name,p.category_name,p.badge,p.summary].join(' ').toLowerCase().includes(q.toLowerCase()));
-  if(!results.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">😕 Tidak ditemukan</div>';return;}
+  if(!results.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">${IC.searchOff}Tidak ditemukan</div>';return;}
   el.innerHTML=results.map(p=>{
     const img=p.thumbnail||p.image;const hasDisc=Number(p.original_price||0)>Number(p.price);
     return`<div class="result-item" onclick="closeSearch();saveSearchHistory('${esc(q).replace(/'/g,"\\'")}');openDetail(${p.id})">
-      ${img?`<img class="result-img" src="${esc(img)}" alt="${esc(p.name)}">`:`<div class="result-img">🛍️</div>`}
+      ${img?`<img class="result-img" src="${esc(img)}" alt="${esc(p.name)}">`:`<div class="result-img">${IC.box}</div>`}
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
@@ -1083,7 +1090,7 @@ window.openPromo=()=>{
     const img=p.thumbnail||p.image;const hasDisc=Number(p.original_price||0)>Number(p.price||0);
     const disc=hasDisc?Math.round((1-p.price/p.original_price)*100):0;
     return`<div class="result-item" onclick="closePromo();openDetail(${p.id})">
-      ${img?`<img class="result-img" src="${esc(img)}" alt="${esc(p.name)}">`:`<div class="result-img">🛍️</div>`}
+      ${img?`<img class="result-img" src="${esc(img)}" alt="${esc(p.name)}">`:`<div class="result-img">${IC.box}</div>`}
       <div class="cart-item-info">
         <div class="cart-item-name">${esc(p.name)}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
@@ -1184,7 +1191,7 @@ async function init(){
     if(pid)setTimeout(()=>openDetail(Number(pid)),500);
   }catch(e){
     console.error('Init error:',e);
-    $('#rows').innerHTML='<div class="empty-state"><div style="font-size:44px">⚠️</div><div style="margin-top:12px;color:#fff;font-weight:700">Gagal memuat data</div><div style="font-size:13px;margin-top:6px">Coba muat ulang halaman.</div></div>';
+    $('#rows').innerHTML='<div class="empty-state"><div style="font-size:44px">${IC.warn}</div><div style="margin-top:12px;color:#fff;font-weight:700">Gagal memuat data</div><div style="font-size:13px;margin-top:6px">Coba muat ulang halaman.</div></div>';
   }finally{
     setTimeout(()=>{const l=$('#pageLoading');l.classList.add('fade-out');setTimeout(()=>l.style.display='none',500);},300);
   }
