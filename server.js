@@ -837,7 +837,7 @@ app.post('/api/admin/restore', requireAuth, uploadBackup.single('file'), functio
     try { fs.unlinkSync(path.join(dataDir, 'store.db-shm')); } catch (_) {}
     audit(req.user, 'RESTORE', 'system', null, 'Restore backup');
     res.json({ success: true, message: 'Restore berhasil. Server akan restart, silakan muat ulang & login kembali.' });
-    setTimeout(() => process.exit(0), 800);
+    setTimeout(() => process.exit(0), 1500);
   });
 });
 

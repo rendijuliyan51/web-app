@@ -236,6 +236,7 @@ Admin (butuh sesi + header `X-CSRF-Token`): CRUD `/api/admin/products`, `/api/ad
 | Port 3000 dipakai | `pkill -f node` lalu `pm2 restart cellyn-store`. |
 | Perubahan frontend tak muncul | Hard refresh (Ctrl+Shift+R). Jika Cloudflare *proxied*, purge cache. |
 | Admin panel error setelah restore | Sesi lama tidak ada di DB hasil restore — cukup login ulang. |
+| Restore: "JSON.parse: unexpected character…" | Respons bukan JSON. Umumnya file backup > `client_max_body_size` Nginx → Nginx balas HTML 413. Naikkan `client_max_body_size` (mis. `1024M`) lalu `nginx -t && systemctl reload nginx`. Bisa juga server keburu restart (restore tetap berhasil — cukup login ulang). |
 
 ---
 
