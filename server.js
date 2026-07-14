@@ -159,6 +159,14 @@ db.exec(`
     status TEXT DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT,
+    is_active INTEGER DEFAULT 1,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 try { db.exec(`ALTER TABLE product_variants ADD COLUMN description TEXT`); } catch (_) {}
@@ -166,6 +174,7 @@ try { db.exec(`ALTER TABLE product_variants ADD COLUMN description TEXT`); } cat
 try { db.exec(`ALTER TABLE products ADD COLUMN original_price INTEGER`); } catch (_) {}
 try { db.exec(`ALTER TABLE categories ADD COLUMN icon_url TEXT`); } catch (_) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN must_change_pw INTEGER DEFAULT 0`); } catch (_) {}
+try { db.exec(`ALTER TABLE pages ADD COLUMN is_active INTEGER DEFAULT 1`); } catch (_) {}
 
 const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
 if (!existingAdmin) {
@@ -173,6 +182,19 @@ if (!existingAdmin) {
   // Tandai wajib ganti password default setelah login pertama
   db.prepare('INSERT INTO users (username, password, role, must_change_pw) VALUES (?, ?, ?, 1)').run('admin', hash, 'admin');
 }
+
+// Seed halaman informasi toko (hanya dibuat kalau belum ada; konten bisa diedit dari admin)
+const DEFAULT_PAGES = [
+  { slug: 'tentang-kami', title: 'Tentang Kami', content: '<p>Selamat datang di toko kami. Silakan ubah teks ini melalui panel admin untuk menceritakan tentang toko Anda.</p>' },
+  { slug: 'kebijakan-privasi', title: 'Kebijakan Privasi', content: '<p>Jelaskan bagaimana data pelanggan dikumpulkan, digunakan, dan dilindungi. Edit teks ini dari panel admin.</p>' },
+  { slug: 'syarat-ketentuan', title: 'Syarat &amp; Ketentuan', content: '<p>Tuliskan syarat dan ketentuan penggunaan layanan serta pembelian di sini.</p>' },
+  { slug: 'kebijakan-refund', title: 'Kebijakan Refund', content: '<p>Jelaskan kebijakan pengembalian dana / refund toko Anda di sini.</p>' },
+  { slug: 'faq', title: 'FAQ', content: '<p>Kumpulan pertanyaan yang sering diajukan beserta jawabannya. Edit dari panel admin.</p>' },
+  { slug: 'cara-pemesanan', title: 'Cara Pemesanan', content: '<p>Langkah-langkah cara memesan produk di toko Anda. Edit dari panel admin.</p>' },
+  { slug: 'hubungi-kami', title: 'Hubungi Kami', content: '<p>Cara menghubungi toko: email, WhatsApp, dan media sosial. Edit dari panel admin.</p>' }
+];
+const insPage = db.prepare('INSERT OR IGNORE INTO pages (slug, title, content, is_active) VALUES (?,?,?,1)');
+DEFAULT_PAGES.forEach(function (p) { insPage.run(p.slug, p.title, p.content); });
 
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -310,7 +332,12 @@ const SETTINGS_MAP = {
   logoPath: 'logo_path',
   bannerPath: 'banner_path',
   qrisImagePath: 'qris_image_path',
-  discordUrl: 'discord_url'
+  discordUrl: 'discord_url',
+  contactEmail: 'contact_email',
+  operatingHours: 'operating_hours',
+  instagramUrl: 'instagram_url',
+  tiktokUrl: 'tiktok_url',
+  facebookUrl: 'facebook_url'
 };
 
 const SNAKE_TO_CAMEL = {};
@@ -561,6 +588,31 @@ app.put('/api/admin/settings', requireAuth, function(req, res) {
   res.json({ success: true });
 });
 
+// PAGES (admin) — kelola halaman informasi toko
+app.get('/api/admin/pages', requireAuth, function(req, res) {
+  res.json(db.prepare('SELECT * FROM pages ORDER BY id ASC').all());
+});
+
+app.put('/api/admin/pages/:id', requireAuth, function(req, res) {
+  const page = db.prepare('SELECT * FROM pages WHERE id = ?').get(req.params.id);
+  if (!page) return res.status(404).json({ error: 'Halaman tidak ditemukan' });
+  const b = req.body || {};
+  const title = (b.title != null ? String(b.title).trim() : page.title) || page.title;
+  const content = b.content != null ? String(b.content) : page.content;
+  db.prepare('UPDATE pages SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(title, content, req.params.id);
+  audit(req.user, 'UPDATE', 'page', req.params.id, 'Halaman "' + title + '" diperbarui');
+  res.json({ success: true });
+});
+
+app.put('/api/admin/pages/:id/toggle', requireAuth, function(req, res) {
+  const page = db.prepare('SELECT * FROM pages WHERE id = ?').get(req.params.id);
+  if (!page) return res.status(404).json({ error: 'Halaman tidak ditemukan' });
+  const val = page.is_active ? 0 : 1;
+  db.prepare('UPDATE pages SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(val, req.params.id);
+  audit(req.user, 'UPDATE', 'page', req.params.id, 'Halaman "' + page.title + '" ' + (val ? 'diaktifkan' : 'dinonaktifkan'));
+  res.json({ success: true, is_active: val });
+});
+
 app.post('/api/admin/logo-upload', requireAuth, upload.single('file'), function(req, res) {
   if (!req.file) return res.status(400).json({ error: 'File tidak ditemukan' });
   const url = '/uploads/' + req.file.filename;
@@ -616,9 +668,15 @@ app.get('/api/storefront', function(req, res) {
     qris_image_path: settings.qrisImagePath || '',
     whatsapp_number: settings.whatsappNumber || '',
     discord_url: settings.discordUrl || 'https://discord.gg/cellynstore',
-    wa_template: settings.wa_template || ''
+    wa_template: settings.wa_template || '',
+    contact_email: settings.contactEmail || '',
+    operating_hours: settings.operatingHours || '',
+    instagram_url: settings.instagramUrl || '',
+    tiktok_url: settings.tiktokUrl || '',
+    facebook_url: settings.facebookUrl || ''
   };
-  res.json({ store, settings, categories, products, notifications, banners });
+  const pages = db.prepare('SELECT slug, title FROM pages WHERE is_active = 1 ORDER BY id ASC').all();
+  res.json({ store, settings, categories, products, notifications, banners, pages });
 });
 
 app.get('/api/categories', function(req, res) {
@@ -908,6 +966,94 @@ app.post('/api/admin/restore', requireAuth, uploadBackup.single('file'), functio
 app.get('/secretadmin', function(req, res) {
   res.sendFile(path.join(__dirname, 'public', 'secretadmin.html'));
 });
+
+// HALAMAN INFORMASI TOKO (publik): /page/:slug — nonaktif/tidak ada => 404
+app.get('/page/:slug', function(req, res) {
+  const s = getSettings();
+  const storeName = s.storeName || s.store_name || 'Cellyn Store';
+  const logo = s.logoPath || '';
+  const page = db.prepare('SELECT * FROM pages WHERE slug = ?').get(req.params.slug);
+  if (!page || !page.is_active) {
+    return res.status(404).set('Content-Type', 'text/html; charset=utf-8').send(renderPageHtml({
+      storeName: storeName, logo: logo, title: 'Halaman tidak ditemukan',
+      body: '<p>Halaman yang Anda cari tidak tersedia atau sedang dinonaktifkan.</p>',
+      pages: [], notFound: true
+    }));
+  }
+  // Konten ditulis admin (tepercaya); buang tag <script> sebagai pengaman tambahan
+  const body = String(page.content || '').replace(/<script[\s\S]*?<\/script>/gi, '');
+  const pages = db.prepare('SELECT slug, title FROM pages WHERE is_active = 1 ORDER BY id ASC').all();
+  res.set('Content-Type', 'text/html; charset=utf-8').send(renderPageHtml({
+    storeName: storeName, logo: logo, title: page.title, body: body, pages: pages,
+    updatedAt: page.updated_at
+  }));
+});
+
+function renderPageHtml(o) {
+  const title = escHtml(o.title);
+  const store = escHtml(o.storeName);
+  const logoHtml = o.logo
+    ? `<img src="${escHtml(o.logo)}" alt="${store}" style="width:32px;height:32px;border-radius:6px;object-fit:cover">`
+    : `<span class="pg-logo-ph">${store.charAt(0) || 'C'}</span>`;
+  const nav = (o.pages || []).map(function(p) {
+    return `<a href="/page/${escHtml(p.slug)}">${escHtml(p.title)}</a>`;
+  }).join('');
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title} — ${store}</title>
+${o.notFound ? '<meta name="robots" content="noindex">' : ''}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#141414;color:#e5e5e5;line-height:1.7;min-height:100vh;display:flex;flex-direction:column}
+a{color:#E50914;text-decoration:none}
+a:hover{text-decoration:underline}
+.pg-header{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;padding:14px 5vw;background:rgba(10,10,10,0.9);backdrop-filter:blur(8px);border-bottom:1px solid #242424}
+.pg-header .name{font-weight:900;color:#E50914;letter-spacing:0.04em;text-transform:uppercase;font-size:15px}
+.pg-logo-ph{width:32px;height:32px;border-radius:6px;background:#E50914;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900}
+.pg-wrap{flex:1;max-width:860px;width:100%;margin:0 auto;padding:36px 5vw 60px}
+.pg-title{font-size:clamp(24px,4vw,34px);font-weight:900;color:#fff;margin-bottom:6px}
+.pg-updated{font-size:12px;color:#808080;margin-bottom:26px}
+.pg-content{font-size:15.5px;color:#cfcfcf}
+.pg-content h1,.pg-content h2,.pg-content h3{color:#fff;font-weight:800;margin:26px 0 10px;line-height:1.3}
+.pg-content h2{font-size:21px}.pg-content h3{font-size:17px}
+.pg-content p{margin:0 0 14px}
+.pg-content ul,.pg-content ol{margin:0 0 14px;padding-left:22px}
+.pg-content li{margin:6px 0}
+.pg-content img{max-width:100%;height:auto;border-radius:10px;margin:10px 0}
+.pg-content a{text-decoration:underline}
+.pg-content blockquote{border-left:3px solid #E50914;padding:6px 16px;margin:14px 0;background:#1c1c1c;border-radius:0 8px 8px 0;color:#bdbdbd}
+.pg-back{display:inline-flex;align-items:center;gap:6px;margin-top:24px;padding:11px 20px;background:#1f1f1f;border:1px solid #333;border-radius:6px;color:#fff;font-weight:700;font-size:14px}
+.pg-back:hover{background:#2a2a2a;text-decoration:none}
+.pg-back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pg-footer{border-top:1px solid #242424;background:#0b0b0b;padding:26px 5vw;text-align:center}
+.pg-footer .fnav{display:flex;flex-wrap:wrap;gap:10px 20px;justify-content:center;margin-bottom:14px}
+.pg-footer .fnav a{color:#a3a3a3;font-size:13px;font-weight:600}
+.pg-footer .fnav a:hover{color:#fff}
+.pg-copy{font-size:12px;color:#6b6b6b}
+</style>
+</head>
+<body>
+<header class="pg-header">
+  <a href="/" style="display:flex;align-items:center;gap:10px">${logoHtml}<span class="name">${store}</span></a>
+</header>
+<main class="pg-wrap">
+  <h1 class="pg-title">${title}</h1>
+  ${o.updatedAt ? `<div class="pg-updated">Diperbarui: ${escHtml(String(o.updatedAt).slice(0, 10))}</div>` : ''}
+  <div class="pg-content">${o.body || ''}</div>
+  <a class="pg-back" href="/"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Kembali ke beranda</a>
+</main>
+<footer class="pg-footer">
+  ${nav ? `<div class="fnav">${nav}</div>` : ''}
+  <div class="pg-copy">&copy; ${new Date().getFullYear()} ${store}</div>
+</footer>
+</body>
+</html>`;
+}
 
 // BOT DETECTION + OG META TAG INJECTION
 const BOT_UA = /whatsapp|telegram|twitterbot|facebookexternalhit|linkedinbot|slackbot|discordbot|googlebot|bingbot|applebot|pinterest|vkshare|w3c_validator|curl|wget|python-requests|scrapy/i;
