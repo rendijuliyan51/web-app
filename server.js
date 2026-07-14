@@ -1018,7 +1018,18 @@ app.get('/produk/:slug', function(req, res) {
       const settings = getSettings();
       const storeName = settings.storeName || settings.store_name || 'Cellyn Store';
       const title = p.name + ' — ' + storeName;
-      const desc = String(p.summary || p.description || (p.name + ' di ' + storeName)).replace(/<[^>]*>/g, '').slice(0, 160);
+      // Harga: kalau produk 0, pakai harga varian (min / "Mulai ...") supaya
+      // preview link tidak menampilkan Rp0.
+      const fmt = n => 'Rp' + Number(n || 0).toLocaleString('id-ID');
+      let priceLabel = '';
+      if (Number(p.price || 0) > 0) {
+        priceLabel = fmt(p.price);
+      } else {
+        const vp = db.prepare('SELECT price FROM product_variants WHERE product_id = ?').all(p.id).map(r => Number(r.price || 0)).filter(n => n > 0);
+        if (vp.length) { const mn = Math.min(...vp), mx = Math.max(...vp); priceLabel = mn === mx ? fmt(mn) : 'Mulai ' + fmt(mn); }
+      }
+      const descBase = String(p.summary || p.description || (p.name + ' di ' + storeName)).replace(/<[^>]*>/g, '').slice(0, 140);
+      const desc = (priceLabel ? priceLabel + ' · ' : '') + descBase;
       const base = req.protocol + '://' + req.get('host');
       const img = p.image ? (/^https?:/.test(p.image) ? p.image : base + p.image) : (settings.logoPath ? base + settings.logoPath : '');
       const url = base + '/produk/' + p.id + '-' + (p.slug || '');

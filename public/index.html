@@ -1060,7 +1060,8 @@ window.buyNowFromDetail=id=>{
 window.shareProduct=id=>{
   const p=state.products.find(x=>x.id===id);if(!p)return;
   const shareUrl=window.location.origin+productUrl(p);
-  if(navigator.share)navigator.share({title:p.name,text:(p.summary||p.name)+' — '+rupiah(p.price),url:shareUrl});
+  const shareText=(p.summary||p.name)+' — '+getProductDisplay(p).priceLabel;
+  if(navigator.share)navigator.share({title:p.name,text:shareText,url:shareUrl});
   else if(navigator.clipboard){navigator.clipboard.writeText(shareUrl);flash('Link disalin!','ok');}
   else flash(shareUrl);
 };
