@@ -590,8 +590,11 @@ app.get('/api/storefront', function(req, res) {
     'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.status = ? ORDER BY p.sort_order ASC, p.id DESC'
   ).all('active');
   // Tambah variants ke setiap produk
-  const variantStmt = db.prepare('SELECT * FROM product_variants WHERE product_id=? ORDER BY sort_order ASC, id ASC');
-  products.forEach(p => { p.variants = variantStmt.all(p.id); });
+  // Ambil semua varian dalam SATU query lalu kelompokkan (hindari N+1 saat produk banyak).
+  const allVariants = db.prepare('SELECT * FROM product_variants ORDER BY sort_order ASC, id ASC').all();
+  const variantsByProduct = {};
+  for (const v of allVariants) { (variantsByProduct[v.product_id] = variantsByProduct[v.product_id] || []).push(v); }
+  products.forEach(p => { p.variants = variantsByProduct[p.id] || []; });
   const notifications = db.prepare('SELECT * FROM notifications WHERE is_read = 0 ORDER BY created_at DESC LIMIT 3').all();
   const banners = db.prepare('SELECT * FROM banners WHERE active=1 ORDER BY sort_order ASC, id ASC').all();
   // Map settings ke snake_case untuk store object
