@@ -131,6 +131,10 @@ body.has-announce .cat-bar{top:96px}
 .grid-count{font-size:12px;color:var(--muted);font-weight:600;flex-shrink:0}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
 .grid .card{width:auto}
+.btn-more{background:var(--card);color:#fff;border:1px solid #333;border-radius:6px;padding:12px 24px;font-size:14px;font-weight:700;transition:background 0.15s}
+.btn-more:hover{background:#252525}
+.row-more{background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;padding:0}
+.row-more:hover{color:#fff}
 
 /* ===== CARD ===== */
 .card{position:relative;flex-shrink:0;width:250px;border-radius:var(--radius);overflow:hidden;background:var(--card);cursor:pointer;transition:transform 0.28s cubic-bezier(0.3,0,0.2,1),box-shadow 0.28s;will-change:transform;transform-origin:center center}
@@ -732,25 +736,26 @@ function buildRows(){
   const newest=[...state.products].sort((a,b)=>b.id-a.id).slice(0,14);
   if(newest.length>=2)rowDefs.push({title:'Baru Ditambahkan',items:newest});
 
-  // Per kategori
+  // Per kategori (batasi 16 per baris; sisanya via "Lihat semua" -> grid paginated)
+  const ROW_CAP=16;
   state.categories.forEach(c=>{
-    const items=state.products.filter(p=>String(p.category_id)===String(c.id));
-    if(items.length)rowDefs.push({title:c.name,items});
+    const all=state.products.filter(p=>String(p.category_id)===String(c.id));
+    if(all.length)rowDefs.push({title:c.name,items:all.slice(0,ROW_CAP),total:all.length,catId:c.id});
   });
 
   // Semua produk (fallback bila belum ada kategori)
   if(!state.categories.length&&state.products.length){
-    rowDefs.push({title:'Semua Produk',items:state.products});
+    rowDefs.push({title:'Semua Produk',items:state.products.slice(0,ROW_CAP),total:state.products.length});
   }
 
   if(!state.products.length){
-    rowsEl.innerHTML='<div class="empty-state"><div style="font-size:48px;margin-bottom:14px">${IC.storefront}</div><div style="font-size:16px;font-weight:700;color:#fff">Belum ada produk</div><div style="font-size:13px;margin-top:6px">Tambahkan produk lewat panel admin</div></div>';
+    rowsEl.innerHTML=`<div class="empty-state"><div style="font-size:48px;margin-bottom:14px">${IC.storefront}</div><div style="font-size:16px;font-weight:700;color:#fff">Belum ada produk</div><div style="font-size:13px;margin-top:6px">Tambahkan produk lewat panel admin</div></div>`;
     return;
   }
 
   rowsEl.innerHTML=rowDefs.map((r,ri)=>`
     <section class="row">
-      <div class="row-head"><span class="row-title">${esc(r.title)}</span><span class="row-count">${r.items.length} item</span></div>
+      <div class="row-head"><span class="row-title">${esc(r.title)}</span>${(r.catId&&r.total>r.items.length)?`<button class="row-more" onclick="selectCategory('${esc(String(r.catId)).replace(/'/g,"\\'")}')">Lihat semua (${r.total})</button>`:`<span class="row-count">${r.total||r.items.length} item</span>`}</div>
       <div class="row-viewport">
         <button class="row-arrow left ${r.items.length>3?'show':''}" onclick="scrollRow(${ri},-1)">‹</button>
         <div class="row-track" id="rowTrack-${ri}">${r.items.map(cardHtml).join('')}</div>
@@ -788,19 +793,45 @@ function renderView(catId){
   if(catId==='all'){buildRows();return;}
   renderGrid(catId);
 }
+let gridState={items:[],shown:0,batch:24};
+let gridObserver=null;
 function renderGrid(catId){
   const cat=state.categories.find(c=>String(c.id)===String(catId));
   const items=state.products.filter(p=>String(p.category_id)===String(catId));
   const rowsEl=$('#rows');
+  if(gridObserver){gridObserver.disconnect();gridObserver=null;}
   if(!items.length){
-    rowsEl.innerHTML='<div class="empty-state"><div style="font-size:44px">${IC.inbox}</div><div style="margin-top:12px;color:#fff;font-weight:700">Belum ada produk di kategori ini</div><div style="font-size:13px;margin-top:6px">Pilih kategori lain atau lihat Semua.</div></div>';
+    rowsEl.innerHTML=`<div class="empty-state"><div style="font-size:44px">${IC.inbox}</div><div style="margin-top:12px;color:#fff;font-weight:700">Belum ada produk di kategori ini</div><div style="font-size:13px;margin-top:6px">Pilih kategori lain atau lihat Semua.</div></div>`;
     return;
   }
+  gridState={items,shown:0,batch:24};
   rowsEl.innerHTML=`<div class="grid-wrap">
     <div class="grid-head"><span class="grid-title">${esc(cat?cat.name:'Produk')}</span><span class="grid-count">${items.length} produk</span></div>
-    <div class="grid">${items.map(cardHtml).join('')}</div>
+    <div class="grid" id="gridItems"></div>
+    <div id="gridMore" style="text-align:center;padding:10px 0 28px"></div>
   </div>`;
+  gridShowMore();
+  const sentinel=$('#gridMore');
+  if(sentinel&&window.IntersectionObserver){
+    gridObserver=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting))gridShowMore(); },{rootMargin:'400px'});
+    gridObserver.observe(sentinel);
+  }
 }
+function gridShowMore(){
+  const grid=$('#gridItems'),more=$('#gridMore');
+  if(!grid||!more||gridState.shown>=gridState.items.length)return;
+  const next=gridState.items.slice(gridState.shown,gridState.shown+gridState.batch);
+  grid.insertAdjacentHTML('beforeend',next.map(cardHtml).join(''));
+  gridState.shown+=next.length;
+  const left=gridState.items.length-gridState.shown;
+  if(left>0){
+    more.innerHTML=`<button class="btn-more" onclick="gridShowMore()">Muat lebih banyak (${left} lagi)</button>`;
+  }else{
+    more.innerHTML=`<div style="font-size:12px;color:var(--muted)">Semua ${gridState.items.length} produk ditampilkan</div>`;
+    if(gridObserver){gridObserver.disconnect();gridObserver=null;}
+  }
+}
+window.gridShowMore=gridShowMore;
 
 /* ============ HERO ============ */
 function buildHero(catId){
@@ -1128,8 +1159,9 @@ function renderSearchHistory(){
 function renderSearchResults(q){
   const el=$('#searchResults');
   if(!q){renderSearchHistory();return;}
-  const results=state.products.filter(p=>[p.name,p.category_name,p.badge,p.summary].join(' ').toLowerCase().includes(q.toLowerCase()));
-  if(!results.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">${IC.searchOff}Tidak ditemukan</div>';return;}
+  const all=state.products.filter(p=>[p.name,p.category_name,p.badge,p.summary].join(' ').toLowerCase().includes(q.toLowerCase()));
+  if(!all.length){el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">${IC.searchOff}Tidak ditemukan</div>`;return;}
+  const CAP=40;const results=all.slice(0,CAP);
   el.innerHTML=results.map(p=>{
     const img=p.thumbnail||p.image;const hasDisc=Number(p.original_price||0)>Number(p.price);
     return`<div class="result-item" onclick="closeSearch();saveSearchHistory('${esc(q).replace(/'/g,"\\'")}');openDetail(${p.id})">
@@ -1142,7 +1174,7 @@ function renderSearchResults(q){
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('')+(all.length>CAP?`<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">Menampilkan ${CAP} dari ${all.length} hasil — persempit kata kunci.</div>`:'');
 }
 window.saveSearchHistory=saveSearchHistory;
 window.openSearch=()=>{loadSearchHistory();$('#searchOverlay').classList.add('active');document.body.style.overflow='hidden';setTimeout(()=>{$('#searchInput').focus();renderSearchHistory();},100);};
