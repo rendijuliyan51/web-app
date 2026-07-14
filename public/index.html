@@ -159,9 +159,16 @@ body.has-announce .cat-bar{top:96px}
 }
 
 /* ===== SKELETON ===== */
-.skel-track{display:flex;gap:8px;overflow:hidden;padding:26px 4vw}
-.skel{flex-shrink:0;width:230px;aspect-ratio:16/9;border-radius:var(--radius);background:linear-gradient(90deg,#1c1c1c 25%,#262626 50%,#1c1c1c 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.shine{background:linear-gradient(90deg,#1a1a1a 25%,#262626 50%,#1a1a1a 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+.skel-hero{height:min(66vh,540px);margin-bottom:24px}
+.skel-row{margin:0 0 34px}
+.skel-head{padding:0 4vw;margin-bottom:14px}
+.skel-title{width:180px;max-width:45vw;height:20px;border-radius:6px}
+.skel-track{display:flex;gap:12px;overflow:hidden;padding:0 4vw}
+.skel-card{flex-shrink:0;width:250px;max-width:60vw}
+.skel-card .m{width:100%;aspect-ratio:16/9;border-radius:var(--radius)}
+.skel-card .l{height:12px;margin-top:9px;border-radius:5px}
 
 /* ===== FOOTER ===== */
 .footer{border-top:1px solid var(--border);padding:40px 4vw 60px;background:#0b0b0b}
@@ -363,7 +370,7 @@ textarea.input{resize:vertical;min-height:70px}
     if(l){ l.style.transition='opacity .4s ease'; l.style.opacity='0';
       setTimeout(function(){ if(l){ l.style.display='none'; } }, 450); }
     var rows=document.getElementById('rows');
-    if(rows && rows.children.length===0){
+    if(rows && !window.__storeLoaded){
       rows.innerHTML='<div style="text-align:center;padding:80px 16px;color:#808080">'
         +'<div style="font-size:17px;color:#fff;font-weight:700">Gagal memuat toko</div>'
         +'<div style="font-size:13px;margin-top:8px">Periksa koneksi internet lalu coba lagi.</div>'
@@ -1219,10 +1226,32 @@ function applyBranding(cfg){
 }
 
 /* ============ INIT ============ */
+function renderSkeletons(){
+  const hero=$('#heroSlides');
+  if(hero)hero.innerHTML='<div class="skel-hero shine"></div>';
+  const rows=$('#rows');
+  if(rows){
+    let html='';
+    for(let r=0;r<3;r++){
+      let cards='';
+      for(let c=0;c<6;c++)cards+='<div class="skel-card"><div class="m shine"></div><div class="l shine" style="width:80%"></div><div class="l shine" style="width:50%"></div></div>';
+      html+='<section class="skel-row"><div class="skel-head"><div class="skel-title shine"></div></div><div class="skel-track">'+cards+'</div></section>';
+    }
+    rows.innerHTML=html;
+  }
+}
+function dismissPageLoader(){
+  const l=$('#pageLoading');
+  if(l&&l.style.display!=='none'){l.classList.add('fade-out');setTimeout(()=>{if(l)l.style.display='none';},500);}
+}
 async function init(){
   loadCart();updateCartUI();
+  renderSkeletons();
+  // Brand splash sebentar, lalu skeleton tampil selagi data dimuat
+  setTimeout(dismissPageLoader,600);
   try{
     const data=await api('/api/storefront');
+    window.__storeLoaded=true;
     state.products=data.products||[];
     state.categories=data.categories||[];
     state.banners=data.banners||[];
@@ -1256,10 +1285,11 @@ async function init(){
     if(!pid){const m=window.location.pathname.match(/^\/produk\/(\d+)/);if(m)pid=m[1];}
     if(pid)setTimeout(()=>openDetail(Number(pid)),500);
   }catch(e){
+    window.__storeLoaded=true;
     console.error('Init error:',e);
-    $('#rows').innerHTML='<div class="empty-state"><div style="font-size:44px">${IC.warn}</div><div style="margin-top:12px;color:#fff;font-weight:700">Gagal memuat data</div><div style="font-size:13px;margin-top:6px">Coba muat ulang halaman.</div></div>';
+    $('#rows').innerHTML=`<div class="empty-state"><div style="font-size:44px">${IC.warn}</div><div style="margin-top:12px;color:#fff;font-weight:700">Gagal memuat data</div><div style="font-size:13px;margin-top:6px">Coba muat ulang halaman.</div></div>`;
   }finally{
-    setTimeout(()=>{const l=$('#pageLoading');l.classList.add('fade-out');setTimeout(()=>l.style.display='none',500);},300);
+    dismissPageLoader();
   }
 }
 init();
