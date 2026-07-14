@@ -33,6 +33,8 @@ app.use(function(req, res, next) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+// Gambar upload: nama file unik per upload, jadi aman di-cache lama (repeat visit lebih cepat).
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), { maxAge: '30d', immutable: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
