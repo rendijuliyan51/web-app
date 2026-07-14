@@ -159,13 +159,6 @@ db.exec(`
   );
 `);
 
-db.exec(`CREATE TABLE IF NOT EXISTS product_images (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  path TEXT NOT NULL,
-  sort_order INTEGER DEFAULT 99,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`);
 try { db.exec(`ALTER TABLE product_variants ADD COLUMN description TEXT`); } catch (_) {}
 
 try { db.exec(`ALTER TABLE products ADD COLUMN original_price INTEGER`); } catch (_) {}
@@ -567,8 +560,7 @@ app.get('/api/storefront', function(req, res) {
   ).all('active');
   // Tambah variants ke setiap produk
   const variantStmt = db.prepare('SELECT * FROM product_variants WHERE product_id=? ORDER BY sort_order ASC, id ASC');
-  const imageStmt = db.prepare('SELECT path FROM product_images WHERE product_id=? ORDER BY sort_order ASC, id ASC');
-  products.forEach(p => { p.variants = variantStmt.all(p.id); p.images = imageStmt.all(p.id).map(r => r.path); });
+  products.forEach(p => { p.variants = variantStmt.all(p.id); });
   const notifications = db.prepare('SELECT * FROM notifications WHERE is_read = 0 ORDER BY created_at DESC LIMIT 3').all();
   const banners = db.prepare('SELECT * FROM banners WHERE active=1 ORDER BY sort_order ASC, id ASC').all();
   // Map settings ke snake_case untuk store object
@@ -629,24 +621,6 @@ app.post('/api/admin/products/:id/thumb-upload', requireAuth, upload.single('fil
   const url = '/uploads/' + req.file.filename;
   db.prepare('UPDATE products SET thumbnail=? WHERE id=?').run(url, req.params.id);
   res.json({ success: true, thumbnail: url });
-});
-
-// PRODUCT GALLERY (multi-foto) — semua di-crop 16:9
-app.get('/api/admin/products/:id/images', requireAuth, function(req, res) {
-  res.json(db.prepare('SELECT * FROM product_images WHERE product_id=? ORDER BY sort_order ASC, id ASC').all(req.params.id));
-});
-app.post('/api/admin/products/:id/images', requireAuth, upload.single('file'), async function(req, res) {
-  if (!req.file) return res.status(400).json({ error: 'File tidak ditemukan' });
-  await cropTo169(req.file.path);
-  await applyWatermark(req.file.path);
-  const url = '/uploads/' + req.file.filename;
-  const cnt = db.prepare('SELECT COUNT(*) c FROM product_images WHERE product_id=?').get(req.params.id).c;
-  const r = db.prepare('INSERT INTO product_images (product_id, path, sort_order) VALUES (?,?,?)').run(req.params.id, url, cnt + 1);
-  res.json({ success: true, id: r.lastInsertRowid, path: url });
-});
-app.delete('/api/admin/images/:id', requireAuth, function(req, res) {
-  db.prepare('DELETE FROM product_images WHERE id=?').run(req.params.id);
-  res.json({ success: true });
 });
 
 // REVIEWS
