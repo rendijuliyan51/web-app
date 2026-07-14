@@ -159,6 +159,15 @@ db.exec(`
   );
 `);
 
+db.exec(`CREATE TABLE IF NOT EXISTS product_images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  path TEXT NOT NULL,
+  sort_order INTEGER DEFAULT 99,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
+try { db.exec(`ALTER TABLE product_variants ADD COLUMN description TEXT`); } catch (_) {}
+
 try { db.exec(`ALTER TABLE products ADD COLUMN original_price INTEGER`); } catch (_) {}
 try { db.exec(`ALTER TABLE categories ADD COLUMN icon_url TEXT`); } catch (_) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN must_change_pw INTEGER DEFAULT 0`); } catch (_) {}
@@ -439,8 +448,19 @@ app.delete('/api/admin/products/:id', requireAuth, function(req, res) {
   res.json({ success: true });
 });
 
+// Crop gambar produk ke rasio 16:9 (seragam di kartu, hero, & galeri)
+async function cropTo169(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (['.gif', '.mp4', '.webm'].includes(ext)) return; // jangan crop animasi/video
+  try {
+    const buf = await sharp(filePath).resize(1280, 720, { fit: 'cover', position: 'centre' }).toBuffer();
+    fs.writeFileSync(filePath, buf);
+  } catch (e) { console.error('Crop 16:9 error:', e.message); }
+}
+
 app.post('/api/admin/products/:id/image-upload', requireAuth, upload.single('file'), async function(req, res) {
   if (!req.file) return res.status(400).json({ error: 'File tidak ditemukan' });
+  await cropTo169(req.file.path);
   await applyWatermark(req.file.path);
   const imageUrl = '/uploads/' + req.file.filename;
   db.prepare('UPDATE products SET image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(imageUrl, req.params.id);
@@ -547,7 +567,8 @@ app.get('/api/storefront', function(req, res) {
   ).all('active');
   // Tambah variants ke setiap produk
   const variantStmt = db.prepare('SELECT * FROM product_variants WHERE product_id=? ORDER BY sort_order ASC, id ASC');
-  products.forEach(p => { p.variants = variantStmt.all(p.id); });
+  const imageStmt = db.prepare('SELECT path FROM product_images WHERE product_id=? ORDER BY sort_order ASC, id ASC');
+  products.forEach(p => { p.variants = variantStmt.all(p.id); p.images = imageStmt.all(p.id).map(r => r.path); });
   const notifications = db.prepare('SELECT * FROM notifications WHERE is_read = 0 ORDER BY created_at DESC LIMIT 3').all();
   const banners = db.prepare('SELECT * FROM banners WHERE active=1 ORDER BY sort_order ASC, id ASC').all();
   // Map settings ke snake_case untuk store object
@@ -603,10 +624,29 @@ try { db.prepare('ALTER TABLE products ADD COLUMN thumbnail TEXT').run(); } catc
 // PRODUCT THUMBNAIL UPLOAD
 app.post('/api/admin/products/:id/thumb-upload', requireAuth, upload.single('file'), async function(req, res) {
   if (!req.file) return res.status(400).json({ error: 'File tidak ditemukan' });
+  await cropTo169(req.file.path);
   await applyWatermark(req.file.path);
   const url = '/uploads/' + req.file.filename;
   db.prepare('UPDATE products SET thumbnail=? WHERE id=?').run(url, req.params.id);
   res.json({ success: true, thumbnail: url });
+});
+
+// PRODUCT GALLERY (multi-foto) — semua di-crop 16:9
+app.get('/api/admin/products/:id/images', requireAuth, function(req, res) {
+  res.json(db.prepare('SELECT * FROM product_images WHERE product_id=? ORDER BY sort_order ASC, id ASC').all(req.params.id));
+});
+app.post('/api/admin/products/:id/images', requireAuth, upload.single('file'), async function(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'File tidak ditemukan' });
+  await cropTo169(req.file.path);
+  await applyWatermark(req.file.path);
+  const url = '/uploads/' + req.file.filename;
+  const cnt = db.prepare('SELECT COUNT(*) c FROM product_images WHERE product_id=?').get(req.params.id).c;
+  const r = db.prepare('INSERT INTO product_images (product_id, path, sort_order) VALUES (?,?,?)').run(req.params.id, url, cnt + 1);
+  res.json({ success: true, id: r.lastInsertRowid, path: url });
+});
+app.delete('/api/admin/images/:id', requireAuth, function(req, res) {
+  db.prepare('DELETE FROM product_images WHERE id=?').run(req.params.id);
+  res.json({ success: true });
 });
 
 // REVIEWS
@@ -652,16 +692,16 @@ app.get('/api/admin/products/:id/variants', requireAuth, function(req, res) {
 app.post('/api/admin/products/:id/variants', requireAuth, function(req, res) {
   const b = req.body;
   if (!b.name) return res.status(400).json({ error: 'Nama varian wajib' });
-  const r = db.prepare('INSERT INTO product_variants (product_id,name,price,original_price,stock,sort_order) VALUES (?,?,?,?,?,?)').run(
-    req.params.id, b.name, Number(b.price||0), b.original_price||null, Number(b.stock||0), Number(b.sort_order||99)
+  const r = db.prepare('INSERT INTO product_variants (product_id,name,price,original_price,stock,sort_order,description) VALUES (?,?,?,?,?,?,?)').run(
+    req.params.id, b.name, Number(b.price||0), b.original_price||null, Number(b.stock||0), Number(b.sort_order||99), b.description||null
   );
   res.json({ id: r.lastInsertRowid, success: true });
 });
 
 app.put('/api/admin/variants/:id', requireAuth, function(req, res) {
   const b = req.body;
-  db.prepare('UPDATE product_variants SET name=?,price=?,original_price=?,stock=?,sort_order=? WHERE id=?').run(
-    b.name, Number(b.price||0), b.original_price||null, Number(b.stock||0), Number(b.sort_order||99), req.params.id
+  db.prepare('UPDATE product_variants SET name=?,price=?,original_price=?,stock=?,sort_order=?,description=? WHERE id=?').run(
+    b.name, Number(b.price||0), b.original_price||null, Number(b.stock||0), Number(b.sort_order||99), b.description||null, req.params.id
   );
   res.json({ success: true });
 });

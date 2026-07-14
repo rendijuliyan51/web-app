@@ -178,6 +178,11 @@ body.has-announce .cat-bar{top:96px}
 .modal-hero{position:relative;width:100%;aspect-ratio:16/9;max-height:420px;background:var(--bg3);overflow:hidden}
 .modal-hero img,.modal-hero video{width:100%;height:100%;object-fit:cover}
 .modal-hero-scrim{position:absolute;inset:0;background:linear-gradient(0deg,var(--bg2) 2%,transparent 55%)}
+.detail-thumbs{display:flex;gap:8px;overflow-x:auto;padding:12px 0 0;scrollbar-width:none}
+.detail-thumbs::-webkit-scrollbar{display:none}
+.detail-thumb{width:88px;height:50px;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;flex-shrink:0;opacity:0.6;transition:opacity .15s,border-color .15s}
+.detail-thumb.active{border-color:var(--accent);opacity:1}
+.detail-thumb:hover{opacity:1}
 .modal-close{position:absolute;top:14px;right:14px;z-index:5;background:rgba(20,20,20,0.75);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;transition:background 0.15s}
 .modal-close:hover{background:var(--accent)}
 .modal-title-abs{position:absolute;left:28px;bottom:20px;right:28px;z-index:4}
@@ -885,10 +890,13 @@ window.openDetail=id=>{
   const displayStok=variants.length?Number(variants[0].stock||0):Number(p.stock||0);
   const disc=displayOrig>0&&displayOrig>displayPrice?Math.round((1-displayPrice/displayOrig)*100):0;
 
-  const isVideo=p.image&&(p.image.endsWith('.mp4')||p.image.endsWith('.webm'));
-  const heroMedia=p.image
-    ?(isVideo?`<video src="${esc(p.image)}" autoplay loop muted playsinline></video>`:`<img src="${esc(p.image)}" alt="${esc(p.name)}">`)
+  const gallery=(Array.isArray(p.images)&&p.images.length)?p.images:(p.image?[p.image]:[]);
+  const firstMedia=gallery[0]||'';
+  const isVideo=firstMedia&&(firstMedia.endsWith('.mp4')||firstMedia.endsWith('.webm'));
+  const heroMedia=firstMedia
+    ?(isVideo?`<video src="${esc(firstMedia)}" autoplay loop muted playsinline></video>`:`<img id="detailMainImg" src="${esc(firstMedia)}" alt="${esc(p.name)}">`)
     :`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:64px;background:linear-gradient(135deg,#232323,#141414)">${IC.box}</div>`;
+  const galleryThumbs=gallery.length>1?`<div class="detail-thumbs">${gallery.map((g,i)=>`<img class="detail-thumb${i===0?' active':''}" src="${esc(g)}" alt="" onclick="setDetailImage('${esc(g).replace(/'/g,"\\'")}',this)">`).join('')}</div>`:'';
 
   const variantHtml=variants.length?`
     <div class="section-label">Pilih Varian</div>
@@ -896,7 +904,7 @@ window.openDetail=id=>{
       ${variants.map((v,i)=>{
         const vs=Number(v.stock||0),vo=Number(v.original_price||0),vp=Number(v.price||0);
         return`<div class="variant-opt ${i===0?'selected':''}" data-id="${v.id}" data-name="${esc(v.name)}" data-price="${vp}" data-stock="${vs}" onclick="selectVariant(this)">
-          <div><div class="vn">${esc(v.name)}</div><div class="vs">${vs<=0?'<span style="color:#ff6b6b">Habis</span>':vs<=3?`<span style="color:#f6c453">Tipis (${vs})</span>`:'Ready'}</div></div>
+          <div style="flex:1;min-width:0;margin-right:10px"><div class="vn">${esc(v.name)}</div><div class="vs">${vs<=0?'<span style="color:#ff6b6b">Habis</span>':vs<=3?`<span style="color:#f6c453">Tipis (${vs})</span>`:'Ready'}</div>${v.description?`<div style="font-size:11px;color:#9a9a9a;margin-top:4px;line-height:1.45">${esc(v.description)}</div>`:''}</div>
           <div class="vp">${vo>0&&vo>vp?`<span class="strike" style="font-size:11px;color:var(--muted);text-decoration:line-through;display:block">${rupiah(vo)}</span>`:''}${rupiah(vp)}</div>
         </div>`;
       }).join('')}
@@ -913,6 +921,7 @@ window.openDetail=id=>{
       <div class="modal-title-abs"><h2>${esc(p.name)}</h2></div>
     </div>
     <div class="modal-body">
+      ${galleryThumbs}
       <div class="modal-meta-row">
         <span class="chip">${esc(p.category_name||'Digital')}</span>
         ${isNew?'<span class="chip green">BARU</span>':''}
@@ -959,6 +968,11 @@ window.closeDetail=()=>{
   $('#detailOverlay').classList.remove('active');
   document.body.style.overflow='';
   const url=new URL(window.location.href);url.searchParams.delete('produk');history.replaceState(null,'',url.toString());
+};
+window.setDetailImage=(src,el)=>{
+  const img=$('#detailMainImg'); if(img) img.src=src;
+  $$('.detail-thumb').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
 };
 window.selectVariant=el=>{
   $$('#variantList .variant-opt').forEach(v=>v.classList.remove('selected'));
