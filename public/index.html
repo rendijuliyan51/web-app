@@ -62,13 +62,22 @@ button{font-family:inherit;cursor:pointer}
 .profile-menu button:hover{background:var(--bg3)}
 
 /* ===== ANNOUNCEMENT ===== */
-.announce{position:fixed;top:0;left:0;right:0;z-index:600;background:var(--accent);color:#fff;text-align:center;font-size:13px;font-weight:600;padding:9px 40px;display:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateY(-100%);transition:transform 0.4s ease}
+.announce{position:fixed;top:0;left:0;right:0;z-index:600;background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.12);color:#fff;font-size:13px;font-weight:600;padding:0 44px 0 16px;display:none;overflow:hidden;height:40px;align-items:center;transform:translateY(-100%);transition:transform 0.4s ease}
 body.has-announce{padding-top:40px}
 body.has-announce .navbar{top:40px}
 body.has-announce .cat-bar{top:96px}
-.announce.show{display:block;transform:translateY(0)}
+.announce.show{display:flex;transform:translateY(0)}
 .announce b{font-weight:800}
-.announce-close{position:absolute;top:50%;right:14px;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:16px;opacity:0.85}
+.announce-close{position:absolute;top:50%;right:12px;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;padding:4px;transition:color 0.15s}
+.announce-close:hover{color:#fff}
+.announce-inner{display:flex;align-items:center;gap:10px;width:100%;overflow:hidden}
+.announce-icon{flex-shrink:0;display:flex;align-items:center;opacity:0.9}
+.announce-icon svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.announce-marquee{overflow:hidden;flex:1;mask-image:linear-gradient(90deg,transparent 0%,#000 5%,#000 95%,transparent 100%)}
+.announce-track{display:inline-flex;gap:60px;white-space:nowrap;animation:marquee 10s linear infinite}
+.announce-track:hover{animation-play-state:paused}
+.announce-track span{white-space:nowrap}
+@keyframes marquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
 
 /* ===== HERO ===== */
 .hero{position:relative;height:88vh;min-height:560px;max-height:920px;width:100%;overflow:hidden;background:#000}
@@ -405,8 +414,11 @@ textarea.input{resize:vertical;min-height:70px}
 
 <!-- ANNOUNCEMENT -->
 <div class="announce" id="announce">
-  <span id="announceText"></span>
-  <button class="announce-close" onclick="closeAnnounce()"><svg class="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div class="announce-inner">
+    <div class="announce-icon"><svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>
+    <div class="announce-marquee"><div class="announce-track" id="announceTrack"><span id="announceText"></span><span id="announceText2"></span></div></div>
+  </div>
+  <button class="announce-close" onclick="closeAnnounce()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
 </div>
 
 <!-- NAVBAR -->
