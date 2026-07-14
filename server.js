@@ -401,6 +401,35 @@ app.get('/api/admin/products', requireAuth, function(req, res) {
   res.json(products);
 });
 
+// Aksi massal: hapus / tampilkan / sembunyikan beberapa produk sekaligus
+app.post('/api/admin/products/bulk', requireAuth, function(req, res) {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids.map(Number).filter(Boolean) : [];
+  const action = req.body.action;
+  if (!ids.length) return res.status(400).json({ error: 'Tidak ada produk dipilih' });
+  const ph = ids.map(() => '?').join(',');
+  if (action === 'delete') {
+    db.prepare('DELETE FROM products WHERE id IN (' + ph + ')').run(...ids);
+  } else if (action === 'show' || action === 'hide') {
+    const status = action === 'show' ? 'active' : 'draft';
+    db.prepare('UPDATE products SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id IN (' + ph + ')').run(status, ...ids);
+  } else {
+    return res.status(400).json({ error: 'Aksi tidak dikenal' });
+  }
+  audit(req.user, action.toUpperCase(), 'product', 0, 'Aksi massal ' + action + ' (' + ids.length + ' produk)');
+  res.json({ success: true, count: ids.length });
+});
+
+// Urutkan ulang produk (drag & drop admin): body { order:[id,...] }
+app.post('/api/admin/products/reorder', requireAuth, function(req, res) {
+  const order = Array.isArray(req.body.order) ? req.body.order.map(Number).filter(Boolean) : [];
+  if (!order.length) return res.status(400).json({ error: 'Urutan kosong' });
+  const upd = db.prepare('UPDATE products SET sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?');
+  const tx = db.transaction(list => { list.forEach((id, i) => upd.run(i + 1, id)); });
+  tx(order);
+  audit(req.user, 'REORDER', 'product', 0, 'Urutan produk diperbarui');
+  res.json({ success: true });
+});
+
 app.post('/api/admin/products', requireAuth, function(req, res) {
   const b = req.body;
   if (!b.name) return res.status(400).json({ error: 'Nama produk wajib' });
@@ -972,5 +1001,41 @@ function cleanupExpiredSessions() {
 }
 cleanupExpiredSessions();
 setInterval(cleanupExpiredSessions, 60 * 60 * 1000).unref();
+
+// URL produk cantik: /produk/:id-slug — sajikan index.html + suntik meta SEO/OG
+// supaya preview link (Discord/WA/Twitter) & crawler dapat judul/gambar produk.
+app.get('/produk/:slug', function(req, res) {
+  const m = String(req.params.slug).match(/^(\d+)/);
+  const id = m ? Number(m[1]) : null;
+  let html;
+  try { html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8'); }
+  catch (e) { return res.status(500).send('Error'); }
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let meta = '';
+  if (id) {
+    const p = db.prepare("SELECT * FROM products WHERE id = ? AND status = 'active'").get(id);
+    if (p) {
+      const settings = getSettings();
+      const storeName = settings.storeName || settings.store_name || 'Cellyn Store';
+      const title = p.name + ' — ' + storeName;
+      const desc = String(p.summary || p.description || (p.name + ' di ' + storeName)).replace(/<[^>]*>/g, '').slice(0, 160);
+      const base = req.protocol + '://' + req.get('host');
+      const img = p.image ? (/^https?:/.test(p.image) ? p.image : base + p.image) : (settings.logoPath ? base + settings.logoPath : '');
+      const url = base + '/produk/' + p.id + '-' + (p.slug || '');
+      meta =
+        '<meta name="description" content="' + esc(desc) + '">' +
+        '<meta property="og:title" content="' + esc(title) + '">' +
+        '<meta property="og:description" content="' + esc(desc) + '">' +
+        '<meta property="og:url" content="' + esc(url) + '">' +
+        (img ? '<meta property="og:image" content="' + esc(img) + '">' : '') +
+        '<meta name="twitter:title" content="' + esc(title) + '">' +
+        '<meta name="twitter:description" content="' + esc(desc) + '">' +
+        (img ? '<meta name="twitter:image" content="' + esc(img) + '">' : '');
+      html = html.replace('<title>Cellyn Store</title>', '<title>' + esc(title) + '</title>');
+    }
+  }
+  html = html.replace('<!--SSR_META-->', meta);
+  res.set('Content-Type', 'text/html; charset=utf-8').send(html);
+});
 
 app.listen(PORT, function() { console.log('Cellyn Store running on port ' + PORT); });

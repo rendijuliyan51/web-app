@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cellyn Store</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cellyn Store">
+<meta name="twitter:card" content="summary_large_image">
+<!--SSR_META-->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -193,7 +197,15 @@ body.has-announce .cat-bar{top:96px}
 .modal-price .strike{font-size:15px;color:var(--muted);text-decoration:line-through;font-weight:500;margin-right:10px}
 .modal-price .disc{font-size:13px;color:#46d369;font-weight:800;margin-left:8px}
 .modal-desc{font-size:14px;color:#d2d2d2;line-height:1.7;margin:14px 0}
-.modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.qty-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding:11px 14px;background:var(--card);border-radius:8px}
+.qty-row .lbl{font-size:14px;font-weight:700;color:#fff}
+.qty-stepper{display:flex;align-items:center;background:var(--bg3);border-radius:8px;overflow:hidden}
+.qty-stepper button{width:40px;height:40px;background:transparent;border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s}
+.qty-stepper button:hover:not(:disabled){background:rgba(255,255,255,0.1)}
+.qty-stepper button:disabled{opacity:0.35;cursor:not-allowed}
+.qty-stepper .qv{min-width:44px;text-align:center;font-size:16px;font-weight:800;color:#fff}
+.qty-stepper svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round}
+.modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .btn{border:none;border-radius:5px;padding:14px;font-size:15px;font-weight:700;transition:transform 0.1s,opacity 0.15s,background 0.15s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .btn svg,.btn-hero svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .btn:active{transform:scale(0.98)}
@@ -519,6 +531,8 @@ const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function rupiah(n){return 'Rp'+new Intl.NumberFormat('id-ID').format(Number(n||0));}
+function slugify(t){return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function productUrl(p){return '/produk/'+p.id+'-'+(p.slug||slugify(p.name));}
 function flash(msg,type){
   const el=$('#flash');
   const ic={ok:'<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',err:'<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'};
@@ -871,10 +885,21 @@ window.heroBuy=id=>{
 };
 
 /* ============ DETAIL MODAL ============ */
-let selectedVariant=null,currentRating=0;
+let selectedVariant=null,currentRating=0,detailQty=1,detailMaxStock=0;
+function syncQtyUI(){
+  const minus=$('#qtyMinus'),plus=$('#qtyPlus'),val=$('#qtyVal');
+  if(!val)return;
+  if(detailMaxStock<1)detailQty=1;
+  if(detailQty>detailMaxStock&&detailMaxStock>=1)detailQty=detailMaxStock;
+  if(detailQty<1)detailQty=1;
+  val.textContent=detailQty;
+  if(minus)minus.disabled=detailQty<=1||detailMaxStock<1;
+  if(plus)plus.disabled=detailQty>=detailMaxStock||detailMaxStock<1;
+}
+window.changeDetailQty=d=>{ detailQty=detailQty+d; syncQtyUI(); };
 window.openDetail=id=>{
   const p=state.products.find(x=>x.id===id);if(!p)return;
-  selectedVariant=null;currentRating=0;
+  selectedVariant=null;currentRating=0;detailQty=1;
   const orig=Number(p.original_price||0),price=Number(p.price);
   const variants=p.variants||[];
   const sold=Number(p.sold_count||0);
@@ -884,6 +909,7 @@ window.openDetail=id=>{
   const displayPrice=variants.length?Number(variants[0].price):price;
   const displayOrig=variants.length?Number(variants[0].original_price||0):orig;
   const displayStok=variants.length?Number(variants[0].stock||0):Number(p.stock||0);
+  detailMaxStock=displayStok;
   const disc=displayOrig>0&&displayOrig>displayPrice?Math.round((1-displayPrice/displayOrig)*100):0;
 
   const isVideo=p.image&&(p.image.endsWith('.mp4')||p.image.endsWith('.webm'));
@@ -905,7 +931,7 @@ window.openDetail=id=>{
     </div>
     ${anyVarDesc?`<div id="variantDesc" class="variant-desc"${variants[0].description?'':' style="display:none"'}>${esc(variants[0].description||'')}</div>`:''}`:'';
 
-  const url=new URL(window.location.href);url.searchParams.set('produk',p.id);history.replaceState(null,'',url.toString());
+  history.replaceState(null,'',productUrl(p));
   api('/api/products/'+p.id+'/view',{method:'POST'}).catch(()=>{});
 
   $('#detailModal').innerHTML=`
@@ -925,6 +951,14 @@ window.openDetail=id=>{
       <div class="modal-price"><span id="detailPrice">${rupiah(displayPrice)}</span>${disc?`<span class="strike" id="detailOrig">${rupiah(displayOrig)}</span><span class="disc" id="detailDisc">-${disc}%</span>`:'<span class="strike" id="detailOrig" style="display:none"></span><span class="disc" id="detailDisc" style="display:none"></span>'}</div>
       ${p.description||p.summary?`<div class="modal-desc">${esc(p.description||p.summary)}</div>`:''}
       ${variantHtml}
+      <div class="qty-row" id="qtyRow">
+        <span class="lbl">Jumlah</span>
+        <div class="qty-stepper">
+          <button type="button" id="qtyMinus" onclick="changeDetailQty(-1)" aria-label="Kurangi"><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <span class="qv" id="qtyVal">1</span>
+          <button type="button" id="qtyPlus" onclick="changeDetailQty(1)" aria-label="Tambah"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+      </div>
       <div class="modal-btns">
         <button class="btn btn-ghost" id="detailAddBtn" onclick="addToCartFromDetail(${p.id})" ${displayStok<=0?'disabled':''}>${IC.cart} Keranjang</button>
         <button class="btn btn-primary" id="detailBuyBtn" onclick="buyNowFromDetail(${p.id})" ${displayStok<=0?'disabled':''}>${IC.bolt} Beli Langsung</button>
@@ -956,18 +990,20 @@ window.openDetail=id=>{
     </div>`;
   $('#detailOverlay').classList.add('active');
   document.body.style.overflow='hidden';
+  syncQtyUI();
   loadReviews(p.id);
 };
 window.closeDetail=()=>{
   $('#detailOverlay').classList.remove('active');
   document.body.style.overflow='';
-  const url=new URL(window.location.href);url.searchParams.delete('produk');history.replaceState(null,'',url.toString());
+  history.replaceState(null,'','/');
 };
 window.selectVariant=el=>{
   $$('#variantList .variant-opt').forEach(v=>v.classList.remove('selected'));
   el.classList.add('selected');
   const vp=Number(el.dataset.price),vs=Number(el.dataset.stock),vo=0;
   selectedVariant={id:Number(el.dataset.id),name:el.dataset.name,price:vp,stock:vs};
+  detailMaxStock=vs;syncQtyUI();
   const vdEl=$('#variantDesc');
   if(vdEl){ const d=el.dataset.desc||''; vdEl.textContent=d; vdEl.style.display=d?'block':'none'; }
   $('#detailPrice').textContent=rupiah(vp);
@@ -987,12 +1023,21 @@ window.addToCartFromDetail=id=>{
   if(variants.length){
     if(!selectedVariant)selectedVariant={id:Number(variants[0].id),name:variants[0].name,price:Number(variants[0].price),stock:Number(variants[0].stock||0)};
     if(selectedVariant.stock<1)return flash('Stok varian habis','err');
+    const addQ=Math.max(1,detailQty);
     const key=cartKey(p.id,selectedVariant.id);
     const found=state.cart.find(x=>x.key===key);
-    if(found){if(found.qty+1>selectedVariant.stock)return flash('Melebihi stok','err');found.qty++;}
-    else state.cart.push({key,id:p.id,variantId:selectedVariant.id,name:p.name+' — '+selectedVariant.name,price:selectedVariant.price,qty:1,image:p.thumbnail||p.image,stock:selectedVariant.stock});
-    saveCart();updateCartUI();flash(p.name+' — '+selectedVariant.name+' ditambahkan','ok');
-  }else addToCart(p);
+    if(found){if(found.qty+addQ>selectedVariant.stock)return flash('Melebihi stok','err');found.qty+=addQ;}
+    else state.cart.push({key,id:p.id,variantId:selectedVariant.id,name:p.name+' — '+selectedVariant.name,price:selectedVariant.price,qty:addQ,image:p.thumbnail||p.image,stock:selectedVariant.stock});
+    saveCart();updateCartUI();flash(addQ+'x '+p.name+' — '+selectedVariant.name+' ditambahkan','ok');
+  }else{
+    if(Number(p.stock||0)<1)return flash('Stok habis','err');
+    const addQ=Math.max(1,detailQty);
+    const key=cartKey(p.id,null);
+    const found=state.cart.find(x=>x.key===key);
+    if(found){if(found.qty+addQ>Number(p.stock||0))return flash('Melebihi stok','err');found.qty+=addQ;}
+    else state.cart.push({key,id:p.id,name:p.name,price:Number(p.price||0),qty:addQ,image:p.thumbnail||p.image,stock:Number(p.stock||0)});
+    saveCart();updateCartUI();flash(addQ+'x '+p.name+' ditambahkan','ok');
+  }
 };
 window.buyNowFromDetail=id=>{
   const p=state.products.find(x=>x.id===id);if(!p)return;
@@ -1000,10 +1045,12 @@ window.buyNowFromDetail=id=>{
   if(variants.length){
     if(!selectedVariant)selectedVariant={id:Number(variants[0].id),name:variants[0].name,price:Number(variants[0].price),stock:Number(variants[0].stock||0)};
     if(selectedVariant.stock<1)return flash('Stok varian habis','err');
-    items=[{id:p.id,name:p.name+' — '+selectedVariant.name,price:selectedVariant.price,qty:1}];
+    if(detailQty>selectedVariant.stock)return flash('Melebihi stok','err');
+    items=[{id:p.id,name:p.name+' — '+selectedVariant.name,price:selectedVariant.price,qty:Math.max(1,detailQty)}];
   }else{
     if(Number(p.stock||0)<1)return flash('Stok habis','err');
-    items=[{id:p.id,name:p.name,price:Number(p.price),qty:1}];
+    if(detailQty>Number(p.stock||0))return flash('Melebihi stok','err');
+    items=[{id:p.id,name:p.name,price:Number(p.price),qty:Math.max(1,detailQty)}];
   }
   api('/api/build-whatsapp-link',{method:'POST',body:JSON.stringify({items})}).then(r=>{
     api('/api/track-order',{method:'POST',body:JSON.stringify({items})}).catch(()=>{});
@@ -1012,7 +1059,7 @@ window.buyNowFromDetail=id=>{
 };
 window.shareProduct=id=>{
   const p=state.products.find(x=>x.id===id);if(!p)return;
-  const shareUrl=window.location.origin+window.location.pathname+'?produk='+id;
+  const shareUrl=window.location.origin+productUrl(p);
   if(navigator.share)navigator.share({title:p.name,text:(p.summary||p.name)+' — '+rupiah(p.price),url:shareUrl});
   else if(navigator.clipboard){navigator.clipboard.writeText(shareUrl);flash('Link disalin!','ok');}
   else flash(shareUrl);
@@ -1203,8 +1250,9 @@ async function init(){
     renderView(state.currentCat);
     updateCatBar();
 
-    // Deep-link ?produk=ID
-    const pid=new URLSearchParams(window.location.search).get('produk');
+    // Deep-link: /produk/ID-slug (URL cantik) atau ?produk=ID (kompatibel lama)
+    let pid=new URLSearchParams(window.location.search).get('produk');
+    if(!pid){const m=window.location.pathname.match(/^\/produk\/(\d+)/);if(m)pid=m[1];}
     if(pid)setTimeout(()=>openDetail(Number(pid)),500);
   }catch(e){
     console.error('Init error:',e);
