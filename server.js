@@ -183,18 +183,127 @@ if (!existingAdmin) {
   db.prepare('INSERT INTO users (username, password, role, must_change_pw) VALUES (?, ?, ?, 1)').run('admin', hash, 'admin');
 }
 
-// Seed halaman informasi toko (hanya dibuat kalau belum ada; konten bisa diedit dari admin)
+// Seed halaman informasi toko. `content` = isi default relevan Cellyn Store.
+// `old` = placeholder versi awal; dipakai untuk upgrade otomatis konten yang
+// BELUM pernah diedit admin (tidak menimpa halaman yang sudah dikustomisasi).
 const DEFAULT_PAGES = [
-  { slug: 'tentang-kami', title: 'Tentang Kami', content: '<p>Selamat datang di toko kami. Silakan ubah teks ini melalui panel admin untuk menceritakan tentang toko Anda.</p>' },
-  { slug: 'kebijakan-privasi', title: 'Kebijakan Privasi', content: '<p>Jelaskan bagaimana data pelanggan dikumpulkan, digunakan, dan dilindungi. Edit teks ini dari panel admin.</p>' },
-  { slug: 'syarat-ketentuan', title: 'Syarat &amp; Ketentuan', content: '<p>Tuliskan syarat dan ketentuan penggunaan layanan serta pembelian di sini.</p>' },
-  { slug: 'kebijakan-refund', title: 'Kebijakan Refund', content: '<p>Jelaskan kebijakan pengembalian dana / refund toko Anda di sini.</p>' },
-  { slug: 'faq', title: 'FAQ', content: '<p>Kumpulan pertanyaan yang sering diajukan beserta jawabannya. Edit dari panel admin.</p>' },
-  { slug: 'cara-pemesanan', title: 'Cara Pemesanan', content: '<p>Langkah-langkah cara memesan produk di toko Anda. Edit dari panel admin.</p>' },
-  { slug: 'hubungi-kami', title: 'Hubungi Kami', content: '<p>Cara menghubungi toko: email, WhatsApp, dan media sosial. Edit dari panel admin.</p>' }
+  {
+    slug: 'tentang-kami', title: 'Tentang Kami',
+    old: '<p>Selamat datang di toko kami. Silakan ubah teks ini melalui panel admin untuk menceritakan tentang toko Anda.</p>',
+    content: `<h2>Tentang Cellyn Store</h2>
+<p>Cellyn Store adalah toko digital yang menyediakan beragam produk dan layanan digital dengan harga terjangkau, proses cepat, dan pelayanan yang ramah. Kami hadir untuk memenuhi kebutuhan digitalmu, mulai dari layanan media sosial (SMM), boost, akun premium, hingga top-up.</p>
+<h3>Kenapa memilih kami?</h3>
+<ul>
+<li><strong>Proses cepat</strong> &mdash; pesanan diproses secepat mungkin setelah pembayaran dikonfirmasi.</li>
+<li><strong>Harga bersaing</strong> &mdash; kami selalu berusaha memberi harga terbaik.</li>
+<li><strong>Admin responsif</strong> &mdash; tim kami siap membantu lewat WhatsApp dan Discord.</li>
+<li><strong>Aman dan terpercaya</strong> &mdash; transaksi jelas dan bergaransi sesuai ketentuan.</li>
+</ul>
+<p>Terima kasih sudah mempercayai Cellyn Store. Selamat berbelanja!</p>`
+  },
+  {
+    slug: 'kebijakan-privasi', title: 'Kebijakan Privasi',
+    old: '<p>Jelaskan bagaimana data pelanggan dikumpulkan, digunakan, dan dilindungi. Edit teks ini dari panel admin.</p>',
+    content: `<h2>Kebijakan Privasi</h2>
+<p>Privasi kamu penting bagi kami. Halaman ini menjelaskan data apa yang kami kumpulkan dan bagaimana kami menggunakannya.</p>
+<h3>Data yang kami kumpulkan</h3>
+<ul>
+<li>Nama atau username yang kamu berikan saat memesan.</li>
+<li>Nomor WhatsApp atau kontak lain untuk komunikasi pesanan.</li>
+<li>Detail pesanan, termasuk data yang dibutuhkan untuk memproses layanan (misalnya link atau username target untuk layanan media sosial).</li>
+</ul>
+<h3>Penggunaan data</h3>
+<p>Data hanya digunakan untuk memproses pesanan, memberikan layanan pelanggan, dan menginformasikan status pesanan. Kami tidak menjual atau menyewakan data pribadimu kepada pihak ketiga.</p>
+<h3>Keamanan</h3>
+<p>Kami menyimpan data seperlunya dan berusaha menjaganya. Mohon tidak membagikan informasi sensitif seperti kata sandi yang tidak diperlukan untuk memproses pesanan.</p>
+<p>Ada pertanyaan soal privasi? Hubungi kami melalui kontak yang tersedia di bagian bawah situs.</p>`
+  },
+  {
+    slug: 'syarat-ketentuan', title: 'Syarat &amp; Ketentuan',
+    old: '<p>Tuliskan syarat dan ketentuan penggunaan layanan serta pembelian di sini.</p>',
+    content: `<h2>Syarat dan Ketentuan</h2>
+<p>Dengan melakukan pemesanan di Cellyn Store, kamu dianggap telah membaca dan menyetujui syarat dan ketentuan berikut.</p>
+<ul>
+<li>Sebagian besar produk kami berupa produk dan layanan <strong>digital</strong>.</li>
+<li>Harga, stok, dan ketersediaan dapat berubah sewaktu-waktu tanpa pemberitahuan.</li>
+<li>Pesanan diproses setelah pembayaran dikonfirmasi.</li>
+<li>Pastikan data yang kamu berikan (misalnya username atau link target) sudah benar. Kesalahan data dari pembeli di luar tanggung jawab kami.</li>
+<li>Dilarang menggunakan layanan untuk tujuan yang melanggar hukum atau ketentuan platform pihak ketiga.</li>
+<li>Estimasi waktu pengerjaan bersifat perkiraan dan dapat berbeda tergantung jenis layanan.</li>
+</ul>
+<p>Kami berhak menolak atau membatalkan pesanan yang mencurigakan atau melanggar ketentuan.</p>`
+  },
+  {
+    slug: 'kebijakan-refund', title: 'Kebijakan Refund',
+    old: '<p>Jelaskan kebijakan pengembalian dana / refund toko Anda di sini.</p>',
+    content: `<h2>Kebijakan Refund</h2>
+<p>Karena produk kami bersifat digital, mohon perhatikan ketentuan pengembalian dana berikut.</p>
+<h3>Refund dapat diberikan jika:</h3>
+<ul>
+<li>Pesanan tidak dapat diproses atau stok kosong.</li>
+<li>Produk atau layanan gagal dikirim sepenuhnya oleh kami.</li>
+<li>Terjadi kesalahan dari pihak kami.</li>
+</ul>
+<h3>Refund tidak berlaku jika:</h3>
+<ul>
+<li>Pesanan sudah selesai diproses atau terkirim dengan benar.</li>
+<li>Kesalahan data dari pembeli (contoh: salah username atau link, akun dikunci atau privat).</li>
+<li>Pembeli berubah pikiran setelah pesanan diproses.</li>
+</ul>
+<p>Pengajuan komplain sebaiknya dilakukan <strong>maksimal 1x24 jam</strong> setelah pesanan, disertai bukti seperti tangkapan layar atau nomor pesanan. Refund diproses melalui metode pembayaran awal atau penggantian sesuai kesepakatan.</p>`
+  },
+  {
+    slug: 'faq', title: 'FAQ',
+    old: '<p>Kumpulan pertanyaan yang sering diajukan beserta jawabannya. Edit dari panel admin.</p>',
+    content: `<h2>Pertanyaan yang Sering Diajukan</h2>
+<h3>Apakah transaksi di sini aman?</h3>
+<p>Ya. Pemesanan dilakukan langsung dengan admin melalui WhatsApp dan pembayaran memakai QRIS. Kamu akan mendapat konfirmasi di setiap tahap pesanan.</p>
+<h3>Bagaimana cara memesan?</h3>
+<p>Pilih produk, tentukan varian dan jumlah, lalu lanjut ke WhatsApp untuk konfirmasi. Panduan lengkap ada di halaman <a href="/page/cara-pemesanan">Cara Pemesanan</a>.</p>
+<h3>Metode pembayaran apa yang tersedia?</h3>
+<p>Saat ini kami menerima pembayaran melalui QRIS, yang bisa dibayar dari berbagai e-wallet dan mobile banking.</p>
+<h3>Berapa lama pesanan diproses?</h3>
+<p>Sebagian besar pesanan diproses segera setelah pembayaran dikonfirmasi. Beberapa layanan membutuhkan waktu pengerjaan tergantung jenis dan jumlahnya.</p>
+<h3>Apakah ada garansi?</h3>
+<p>Beberapa layanan memiliki garansi sesuai ketentuan produk. Silakan tanyakan ke admin sebelum memesan.</p>
+<h3>Bagaimana jika ada kendala?</h3>
+<p>Hubungi kami lewat WhatsApp atau gabung ke komunitas Discord kami. Detail kontak ada di bagian bawah situs.</p>`
+  },
+  {
+    slug: 'cara-pemesanan', title: 'Cara Pemesanan',
+    old: '<p>Langkah-langkah cara memesan produk di toko Anda. Edit dari panel admin.</p>',
+    content: `<h2>Cara Pemesanan</h2>
+<p>Memesan di Cellyn Store sangat mudah. Cukup ikuti langkah berikut:</p>
+<ol>
+<li><strong>Pilih produk</strong> yang kamu inginkan di halaman utama.</li>
+<li><strong>Pilih varian dan jumlah</strong> pada halaman detail produk.</li>
+<li>Klik <strong>Beli Langsung</strong> atau masukkan ke keranjang, lalu lanjut <strong>Chat WhatsApp</strong> untuk konfirmasi pesanan.</li>
+<li><strong>Lakukan pembayaran</strong> via QRIS sesuai total yang tertera.</li>
+<li>Kirim <strong>bukti pembayaran</strong> ke admin.</li>
+<li>Pesanan <strong>diproses</strong> dan kamu akan dikabari setelah selesai.</li>
+</ol>
+<p>Butuh bantuan saat memesan? Chat admin lewat WhatsApp atau gabung Discord kami, linknya ada di bagian bawah situs.</p>`
+  },
+  {
+    slug: 'hubungi-kami', title: 'Hubungi Kami',
+    old: '<p>Cara menghubungi toko: email, WhatsApp, dan media sosial. Edit dari panel admin.</p>',
+    content: `<h2>Hubungi Kami</h2>
+<p>Punya pertanyaan sebelum memesan, butuh bantuan, atau ingin komplain? Tim Cellyn Store siap membantu.</p>
+<ul>
+<li><strong>WhatsApp</strong> &mdash; cara tercepat untuk memesan dan bertanya.</li>
+<li><strong>Discord</strong> &mdash; gabung komunitas kami untuk info promo, update, dan bantuan.</li>
+<li><strong>Email</strong> &mdash; untuk pertanyaan yang lebih formal.</li>
+</ul>
+<p>Jam operasional dan detail kontak lengkap tersedia di bagian bawah (footer) setiap halaman. Kami usahakan membalas secepat mungkin pada jam operasional.</p>`
+  }
 ];
 const insPage = db.prepare('INSERT OR IGNORE INTO pages (slug, title, content, is_active) VALUES (?,?,?,1)');
-DEFAULT_PAGES.forEach(function (p) { insPage.run(p.slug, p.title, p.content); });
+const upgradePage = db.prepare("UPDATE pages SET content = ? WHERE slug = ? AND (content = ? OR content IS NULL OR content = '')");
+DEFAULT_PAGES.forEach(function (p) {
+  insPage.run(p.slug, p.title, p.content);
+  // Perbarui konten placeholder bawaan yang belum diedit admin (aman: yang sudah dikustomisasi tidak tersentuh)
+  upgradePage.run(p.content, p.slug, p.old);
+});
 
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
