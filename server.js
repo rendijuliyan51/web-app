@@ -946,26 +946,36 @@ app.get('*', function(req, res) {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   const ua = req.headers['user-agent'] || '';
   const isBot = BOT_UA.test(ua);
-  const produkId = req.query.produk;
+  // Dukung dua bentuk URL: lama "?produk=ID" dan cantik "/produk/ID-slug"
+  const produkId = req.query.produk || (req.path.match(/^\/produk\/(\d+)/) || [])[1] || null;
   const siteUrl = 'https://cellynstore.web.id';
 
-  // Bot request dengan ?produk=ID — inject meta produk
+  // Bot request untuk sebuah produk — inject meta produk (judul, harga, gambar)
   if (isBot && produkId) {
     try {
       const p = db.prepare('SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id=c.id WHERE p.id=? AND p.status="active"').get(produkId);
       if (p) {
         const s = getSettings();
         const storeName = s.storeName || s.store_name || 'Cellyn Store';
-        const price = new Intl.NumberFormat('id-ID').format(p.price);
-        const orig = Number(p.original_price||0);
-        const hasDisc = orig > Number(p.price);
-        const desc = (p.summary || p.description || `Harga: Rp${price}${hasDisc?' (PROMO!)':''} — ${storeName}`).slice(0,200);
-        const img = p.image ? (p.image.startsWith('http') ? p.image : siteUrl+p.image) : siteUrl+'/uploads/og-default.jpg';
+        // Harga: pakai harga produk; kalau 0, ambil dari varian (min / "Mulai ...")
+        const fmt = n => 'Rp' + new Intl.NumberFormat('id-ID').format(Number(n || 0));
+        let priceLabel = '';
+        if (Number(p.price || 0) > 0) {
+          priceLabel = fmt(p.price) + (Number(p.original_price || 0) > Number(p.price) ? ' (PROMO!)' : '');
+        } else {
+          const vp = db.prepare('SELECT price FROM product_variants WHERE product_id=?').all(p.id).map(r => Number(r.price || 0)).filter(n => n > 0);
+          if (vp.length) { const mn = Math.min(...vp), mx = Math.max(...vp); priceLabel = mn === mx ? fmt(mn) : 'Mulai ' + fmt(mn); }
+        }
+        const descBase = String(p.summary || p.description || (p.name + ' di ' + storeName)).replace(/<[^>]*>/g, '').slice(0, 140);
+        const desc = (priceLabel ? priceLabel + ' \u00b7 ' : '') + descBase;
+        // Gambar preview: banner (landscape) dulu, lalu thumbnail, terakhir default
+        const imgSrc = p.image || p.thumbnail || '';
+        const img = imgSrc ? (imgSrc.startsWith('http') ? imgSrc : siteUrl + imgSrc) : siteUrl + '/uploads/og-default.jpg';
         return res.send(buildOGHtml({
           title: `${p.name} — ${storeName}`,
           description: desc,
           image: img,
-          url: `${siteUrl}/?produk=${p.id}`,
+          url: `${siteUrl}/produk/${p.id}-${p.slug || ''}`,
           siteName: storeName
         }));
       }
@@ -1001,52 +1011,5 @@ function cleanupExpiredSessions() {
 }
 cleanupExpiredSessions();
 setInterval(cleanupExpiredSessions, 60 * 60 * 1000).unref();
-
-// URL produk cantik: /produk/:id-slug — sajikan index.html + suntik meta SEO/OG
-// supaya preview link (Discord/WA/Twitter) & crawler dapat judul/gambar produk.
-app.get('/produk/:slug', function(req, res) {
-  const m = String(req.params.slug).match(/^(\d+)/);
-  const id = m ? Number(m[1]) : null;
-  let html;
-  try { html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8'); }
-  catch (e) { return res.status(500).send('Error'); }
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  let meta = '';
-  if (id) {
-    const p = db.prepare("SELECT * FROM products WHERE id = ? AND status = 'active'").get(id);
-    if (p) {
-      const settings = getSettings();
-      const storeName = settings.storeName || settings.store_name || 'Cellyn Store';
-      const title = p.name + ' — ' + storeName;
-      // Harga: kalau produk 0, pakai harga varian (min / "Mulai ...") supaya
-      // preview link tidak menampilkan Rp0.
-      const fmt = n => 'Rp' + Number(n || 0).toLocaleString('id-ID');
-      let priceLabel = '';
-      if (Number(p.price || 0) > 0) {
-        priceLabel = fmt(p.price);
-      } else {
-        const vp = db.prepare('SELECT price FROM product_variants WHERE product_id = ?').all(p.id).map(r => Number(r.price || 0)).filter(n => n > 0);
-        if (vp.length) { const mn = Math.min(...vp), mx = Math.max(...vp); priceLabel = mn === mx ? fmt(mn) : 'Mulai ' + fmt(mn); }
-      }
-      const descBase = String(p.summary || p.description || (p.name + ' di ' + storeName)).replace(/<[^>]*>/g, '').slice(0, 140);
-      const desc = (priceLabel ? priceLabel + ' · ' : '') + descBase;
-      const base = req.protocol + '://' + req.get('host');
-      const img = p.image ? (/^https?:/.test(p.image) ? p.image : base + p.image) : (settings.logoPath ? base + settings.logoPath : '');
-      const url = base + '/produk/' + p.id + '-' + (p.slug || '');
-      meta =
-        '<meta name="description" content="' + esc(desc) + '">' +
-        '<meta property="og:title" content="' + esc(title) + '">' +
-        '<meta property="og:description" content="' + esc(desc) + '">' +
-        '<meta property="og:url" content="' + esc(url) + '">' +
-        (img ? '<meta property="og:image" content="' + esc(img) + '">' : '') +
-        '<meta name="twitter:title" content="' + esc(title) + '">' +
-        '<meta name="twitter:description" content="' + esc(desc) + '">' +
-        (img ? '<meta name="twitter:image" content="' + esc(img) + '">' : '');
-      html = html.replace('<title>Cellyn Store</title>', '<title>' + esc(title) + '</title>');
-    }
-  }
-  html = html.replace('<!--SSR_META-->', meta);
-  res.set('Content-Type', 'text/html; charset=utf-8').send(html);
-});
 
 app.listen(PORT, function() { console.log('Cellyn Store running on port ' + PORT); });
