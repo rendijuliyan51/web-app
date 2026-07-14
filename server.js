@@ -818,6 +818,7 @@ app.get('/api/admin/backup', requireAuth, function(req, res) {
   tar.stdout.pipe(res);
   tar.stderr.on('data', () => {});
   tar.on('error', (e) => { if (!res.headersSent) res.status(500).json({ error: 'Backup gagal: ' + e.message }); });
+  try { saveSetting('last_backup_at', new Date().toISOString()); } catch (_) {}
   audit(req.user, 'BACKUP', 'system', null, 'Unduh backup');
 });
 
@@ -825,19 +826,34 @@ app.get('/api/admin/backup', requireAuth, function(req, res) {
 app.post('/api/admin/restore', requireAuth, uploadBackup.single('file'), function(req, res) {
   if (!req.file) return res.status(400).json({ error: 'File backup tidak ditemukan' });
   const tmp = req.file.path;
-  try { fs.copyFileSync(path.join(dataDir, 'store.db'), path.join(dataDir, 'store.db.prev')); } catch (_) {}
-  const tar = spawn('tar', ['-xzf', tmp, '-C', __dirname]);
-  tar.stderr.on('data', () => {});
-  tar.on('error', (e) => { try { fs.unlinkSync(tmp); } catch (_) {} if (!res.headersSent) res.status(500).json({ error: 'Restore gagal: ' + e.message }); });
-  tar.on('close', (code) => {
-    try { fs.unlinkSync(tmp); } catch (_) {}
-    if (code !== 0) { if (!res.headersSent) res.status(500).json({ error: 'Restore gagal (file backup tidak valid?)' }); return; }
-    // Buang WAL lama agar SQLite membaca store.db hasil restore saat restart
-    try { fs.unlinkSync(path.join(dataDir, 'store.db-wal')); } catch (_) {}
-    try { fs.unlinkSync(path.join(dataDir, 'store.db-shm')); } catch (_) {}
-    audit(req.user, 'RESTORE', 'system', null, 'Restore backup');
-    res.json({ success: true, message: 'Restore berhasil. Server akan restart, silakan muat ulang & login kembali.' });
-    setTimeout(() => process.exit(0), 1500);
+  // 1) Validasi arsip DULU (jangan sentuh data kalau file salah): harus gzip/tar valid & berisi data/store.db
+  const check = spawn('tar', ['-tzf', tmp]);
+  let listing = '';
+  check.stdout.on('data', (d) => { listing += d.toString(); });
+  check.stderr.on('data', () => {});
+  check.on('error', (e) => { try { fs.unlinkSync(tmp); } catch (_) {} if (!res.headersSent) res.status(500).json({ error: 'Gagal membaca arsip: ' + e.message }); });
+  check.on('close', (checkCode) => {
+    const hasDb = listing.split('\n').some((l) => { const t = l.trim(); return t === 'data/store.db' || t === './data/store.db'; });
+    if (checkCode !== 0 || !hasDb) {
+      try { fs.unlinkSync(tmp); } catch (_) {}
+      if (!res.headersSent) res.status(400).json({ error: 'File backup tidak valid (bukan arsip backup Cellyn Store). Data TIDAK diubah.' });
+      return;
+    }
+    // 2) Valid → simpan salinan pengaman lalu timpa
+    try { fs.copyFileSync(path.join(dataDir, 'store.db'), path.join(dataDir, 'store.db.prev')); } catch (_) {}
+    const tar = spawn('tar', ['-xzf', tmp, '-C', __dirname]);
+    tar.stderr.on('data', () => {});
+    tar.on('error', (e) => { try { fs.unlinkSync(tmp); } catch (_) {} if (!res.headersSent) res.status(500).json({ error: 'Restore gagal: ' + e.message }); });
+    tar.on('close', (code) => {
+      try { fs.unlinkSync(tmp); } catch (_) {}
+      if (code !== 0) { if (!res.headersSent) res.status(500).json({ error: 'Restore gagal (arsip rusak?)' }); return; }
+      // Buang WAL lama agar SQLite membaca store.db hasil restore saat restart
+      try { fs.unlinkSync(path.join(dataDir, 'store.db-wal')); } catch (_) {}
+      try { fs.unlinkSync(path.join(dataDir, 'store.db-shm')); } catch (_) {}
+      audit(req.user, 'RESTORE', 'system', null, 'Restore backup');
+      res.json({ success: true, message: 'Restore berhasil. Server akan restart, silakan muat ulang & login kembali.' });
+      setTimeout(() => process.exit(0), 1500);
+    });
   });
 });
 
