@@ -76,10 +76,10 @@ body.has-announce .cat-bar{top:96px}
 .announce-icon{flex-shrink:0;display:flex;align-items:center;opacity:0.9}
 .announce-icon svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .announce-marquee{overflow:hidden;flex:1;mask-image:linear-gradient(90deg,transparent 0%,#000 8%,#000 92%,transparent 100%)}
-.announce-track{display:inline-flex;gap:80px;white-space:nowrap;animation:marquee 6s linear infinite;will-change:transform}
+.announce-track{display:inline-flex;gap:80px;white-space:nowrap;animation:marquee 7s linear infinite;will-change:transform;transform:translateZ(0);backface-visibility:hidden;-webkit-font-smoothing:subpixel-antialiased}
 .announce-track:hover{animation-play-state:paused}
 .announce-track span{white-space:nowrap;flex-shrink:0}
-@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes marquee{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
 
 /* ===== HERO ===== */
 .hero{position:relative;height:88vh;min-height:560px;max-height:920px;width:100%;overflow:hidden;background:#000}
