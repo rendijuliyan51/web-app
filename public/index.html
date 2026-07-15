@@ -101,9 +101,11 @@ body.has-announce .cat-bar{top:96px}
 .btn-hero-play:hover{background:rgba(255,255,255,0.82)}
 .btn-hero-info{background:rgba(109,109,110,0.55);color:#fff;backdrop-filter:blur(2px)}
 .btn-hero-info:hover{background:rgba(109,109,110,0.4)}
-.hero-dots{position:absolute;bottom:20px;right:4vw;display:flex;gap:8px;z-index:4}
-.hero-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.35);cursor:pointer;transition:all 0.2s}
-.hero-dot.active{background:var(--accent);width:22px;border-radius:99px}
+.hero-dots{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:4;align-items:center}
+.hero-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.3);cursor:pointer;transition:all 0.25s;flex-shrink:0}
+.hero-dot.active{background:var(--accent);width:20px;border-radius:99px}
+.hero-dot.near{width:6px;height:6px;opacity:0.5}
+.hero-dot.far{width:5px;height:5px;opacity:0.25}
 
 /* ===== ROWS ===== */
 .rows{position:relative;z-index:10;margin-top:0;padding-bottom:40px}
@@ -942,7 +944,27 @@ function buildHero(catId){
 
   const dots=$('#heroDots');
   if(slides.length>1){
-    dots.innerHTML=slides.map((_,i)=>`<div class="hero-dot ${i===0?'active':''}" onclick="heroGo(${i})"></div>`).join('');
+    function renderDots(activeIdx){
+      const total=slides.length;
+      if(total<=5){
+        dots.innerHTML=slides.map((_,i)=>`<div class="hero-dot ${i===activeIdx?'active':''}" onclick="heroGo(${i})"></div>`).join('');
+        return;
+      }
+      let html='';
+      for(let i=0;i<5;i++){
+        let realIdx,cls='';
+        if(i===0) realIdx=((activeIdx-2)+total)%total;
+        else if(i===1) realIdx=((activeIdx-1)+total)%total;
+        else if(i===2){realIdx=activeIdx;cls='active';}
+        else if(i===3) realIdx=(activeIdx+1)%total;
+        else realIdx=(activeIdx+2)%total;
+        if(i===0||i===4) cls='far';
+        else if(i===1||i===3) cls='near';
+        html+=`<div class="hero-dot ${cls}" onclick="heroGo(${realIdx})"></div>`;
+      }
+      dots.innerHTML=html;
+    }
+    renderDots(0);
     startHeroAuto();
   }else dots.innerHTML='';
 }
@@ -950,7 +972,7 @@ window.heroGo=idx=>{
   const slides=$$('#heroSlides .hero-slide');if(!slides.length)return;
   state.heroIdx=(idx+slides.length)%slides.length;
   slides.forEach((s,i)=>s.classList.toggle('active',i===state.heroIdx));
-  $$('#heroDots .hero-dot').forEach((d,i)=>d.classList.toggle('active',i===state.heroIdx));
+  renderDots(state.heroIdx);
 };
 function startHeroAuto(){
   clearInterval(state.heroTimer);
