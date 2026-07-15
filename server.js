@@ -783,7 +783,8 @@ app.get('/api/storefront', function(req, res) {
     instagram_url: settings.instagramUrl || '',
     tiktok_url: settings.tiktokUrl || '',
     facebook_url: settings.facebookUrl || '',
-    fireworks_enabled: settings.fireworksEnabled || settings.fireworks_enabled || '0'
+    fireworks_enabled: settings.fireworksEnabled || settings.fireworks_enabled || '0',
+    stars_enabled: settings.starsEnabled || settings.stars_enabled || '1'
   };
   const pages = db.prepare('SELECT slug, title FROM pages WHERE is_active = 1 ORDER BY id ASC').all();
   res.json({ store, settings, categories, products, notifications, banners, pages });

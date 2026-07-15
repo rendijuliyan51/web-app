@@ -1437,7 +1437,7 @@ init();
 (function(){
   const canvas = document.getElementById('bgCanvas');
   const ctx = canvas.getContext('2d');
-  let W, H, stars=[], shootingStars=[], particles=[], fwEnabled=false;
+  let W, H, stars=[], shootingStars=[], particles=[], fwEnabled=false, starsEnabled=true;
 
   function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; initStars(); }
   window.addEventListener('resize', resize); resize();
@@ -1546,10 +1546,12 @@ init();
   let lastFw=0, lastStar=0;
   function loop(){
     ctx.clearRect(0,0,W,H);
-    drawStars();
+    if(starsEnabled) drawStars();
     const now=Date.now();
-    if(now-lastStar>2000+Math.random()*3000){ spawnShootingStar(); lastStar=now; }
-    drawShootingStars();
+    if(starsEnabled){
+      if(now-lastStar>2000+Math.random()*3000){ spawnShootingStar(); lastStar=now; }
+      drawShootingStars();
+    }
     if(fwEnabled){
       if(now-lastFw>800+Math.random()*600){ spawnFirework(); if(Math.random()>0.5) spawnFirework(); lastFw=now; }
       drawParticles();
@@ -1561,6 +1563,7 @@ init();
   function checkFw(){
     fetch('/api/storefront').then(r=>r.json()).then(d=>{
       fwEnabled=d.store?.fireworks_enabled==='1';
+      starsEnabled=d.store?.stars_enabled!=='0';
     }).catch(()=>{});
   }
   checkFw();
