@@ -782,7 +782,8 @@ app.get('/api/storefront', function(req, res) {
     operating_hours: settings.operatingHours || '',
     instagram_url: settings.instagramUrl || '',
     tiktok_url: settings.tiktokUrl || '',
-    facebook_url: settings.facebookUrl || ''
+    facebook_url: settings.facebookUrl || '',
+    fireworks_enabled: settings.fireworksEnabled || settings.fireworks_enabled || '0'
   };
   const pages = db.prepare('SELECT slug, title FROM pages WHERE is_active = 1 ORDER BY id ASC').all();
   res.json({ store, settings, categories, products, notifications, banners, pages });
